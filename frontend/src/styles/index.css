@@ -1,0 +1,72 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+    @apply bg-gradient-to-b from-blue-50 to-white text-gray-800;
+}
+
+h1, h2, h3, h4, h5, h6 {
+    @apply font-bold;
+}
+
+a {
+    @apply text-blue-500 hover:text-blue-700;
+}
+
+button {
+    @apply font-semibold py-2 px-4 rounded;
+}
+
+.note-item {
+    @apply border border-gray-300 rounded-lg p-4 mb-4 bg-white shadow-md;
+}
+
+.note-editor {
+    @apply border border-gray-300 rounded-lg p-4 bg-white shadow-md;
+}
+
+/* Ensure editor and inputs receive pointer events and sit above any accidental overlays */
+.note-editor {
+    position: relative;
+    z-index: 20;
+    pointer-events: auto;
+}
+
+input, textarea {
+    pointer-events: auto;
+    position: relative;
+    z-index: 30;
+}
+
+/* Dark mode (follows user's OS/browser prefers-color-scheme) */
+@media (prefers-color-scheme: dark) {
+    body {
+        @apply bg-gradient-to-b from-blue-900 to-black text-gray-100;
+    }
+
+    a {
+        @apply text-blue-300 hover:text-blue-100;
+    }
+
+    .note-item {
+        @apply border-gray-700 rounded-lg p-4 mb-4 bg-gray-800 shadow-md;
+    }
+
+    .note-editor {
+        @apply border-gray-700 rounded-lg p-4 bg-gray-800 shadow-md;
+    }
+
+    /* Inputs in editor: darker background with light text */
+    .note-editor input,
+    .note-editor textarea,
+    input,
+    textarea {
+        @apply bg-gray-700 text-gray-100 border-gray-600;
+    }
+
+    /* Buttons: slightly brighter blue on dark */
+    button {
+        @apply bg-blue-600 text-white;
+    }
+}
