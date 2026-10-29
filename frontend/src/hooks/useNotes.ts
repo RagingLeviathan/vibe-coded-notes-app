@@ -1,10 +1,10 @@
 import { useEffect, useState, useCallback } from 'react';
-import { fetchNotes, createNote, updateNote, deleteNote } from '../services/api';
+import { fetchNotes, createNote, updateNote, deleteNote, getErrorMessage } from '../services/api';
 
 export const useNotes = () => {
     const [notes, setNotes] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<any | null>(null);
+    const [error, setError] = useState<string | null>(null);
     const [page, setPage] = useState<number>(1);
     const [limit] = useState<number>(5);
     const [total, setTotal] = useState<number>(0);
@@ -20,7 +20,7 @@ export const useNotes = () => {
             setPage(res.page || p);
             if (q !== undefined) setSearch(q);
         } catch (err) {
-            setError(err);
+            setError(getErrorMessage(err));
         } finally {
             setLoading(false);
         }
@@ -30,35 +30,42 @@ export const useNotes = () => {
         loadNotes(1, search || undefined);
     }, []);
 
-    const addNote = async (note: any) => {
+    // add/edit return null on success or an error message so the editor can keep the user's text on failure
+    const addNote = async (note: any): Promise<string | null> => {
         try {
-            const newNote = await createNote(note);
-            // refresh current page (preserving current search)
-            loadNotes(page, search || undefined);
+            await createNote(note);
+            setError(null);
+            await loadNotes(page, search || undefined);
+            return null;
         } catch (err) {
-            setError(err);
+            const message = getErrorMessage(err);
+            setError(message);
+            return message;
         }
     };
 
-    const editNote = async (id: number, updatedNote: any) => {
+    const editNote = async (id: number, updatedNote: any): Promise<string | null> => {
         try {
-            const note = await updateNote(id, updatedNote);
-            setNotes((prevNotes: any[]) => 
-                prevNotes.map((n: any) => (n.id === id ? note : n))
-            );
+            await updateNote(id, updatedNote);
+            setError(null);
+            await loadNotes(page, search || undefined);
+            return null;
         } catch (err) {
-            setError(err);
+            const message = getErrorMessage(err);
+            setError(message);
+            return message;
         }
     };
 
     const removeNote = async (id: number) => {
         try {
             await deleteNote(id);
+            setError(null);
             // refresh current page (preserve search)
             const newPage = Math.max(1, page);
             loadNotes(newPage, search || undefined);
         } catch (err) {
-            setError(err);
+            setError(getErrorMessage(err));
         }
     };
 

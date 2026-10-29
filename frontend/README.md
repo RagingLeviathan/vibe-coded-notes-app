@@ -1,3 +1,44 @@
+# Frontend local setup
+
+This folder runs the Vite-powered React frontend. Small notes about local configuration and the Hardcover GraphQL helper page.
+
+Environment
+--
+- Create `frontend/.env.local` (this file should NOT be committed). You can copy the example included here:
+
+```text
+VITE_HARDCOVER_TOKEN=your_hardcover_token_here
+VITE_HARDCOVER_URL=https://api.hardcover.app/v1/graphql
+```
+
+- Restart the dev server after editing `.env.local` because Vite reads env vars at startup.
+
+Running the dev server
+--
+- Development (default HMR):
+
+```powershell
+cd frontend
+npm run dev
+```
+
+- Development with polling (useful on Windows/WSL/network drives):
+
+```powershell
+npm start
+# or
+npm run dev:poll
+```
+
+Hardcover GraphQL page
+--
+- Open the app in your browser (Vite will print the URL) and click the `Hardcover` link in the header.
+- If `VITE_HARDCOVER_TOKEN` is present in `.env.local` the page will automatically run a sample query on load and show results.
+- If you prefer, paste a token into the token field on the page and click `Send` to run queries manually.
+
+Security
+--
+- Never commit `.env.local` with real tokens. The repo `.gitignore` already ignores `.env*` files.
 # Frontend - Local LAN access
 
 This README explains how to run the frontend dev server (Vite) so you can access it from other devices on your local network, plus useful troubleshooting steps.

@@ -2,8 +2,13 @@ import express from 'express';
 import bodyParser from 'body-parser';
 import cors from 'cors';
 import os from 'os';
+import dotenv from 'dotenv';
 import { setRoutes } from './routes/notes';
 import dbRouter from './routes/db';
+import hardcoverRouter from './routes/hardcover';
+
+// Load environment variables as early as possible so routes can read process.env
+dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -11,9 +16,22 @@ const PORT = process.env.PORT || 5000;
 app.use(cors());
 app.use(bodyParser.json());
 
+// Simple request logger for /api routes to aid debugging incoming proxy requests
+app.use('/api', (req, _res, next) => {
+    try {
+        const now = new Date().toISOString();
+        console.log(`${now} [API] ${req.method} ${req.originalUrl}`);
+    } catch (e) {
+        // ignore logging errors
+    }
+    next();
+});
+
 setRoutes(app);
 // mount DB debug routes under /api/db
 app.use('/api/db', dbRouter);
+// mount proxy route for Hardcover under /api
+app.use('/api', hardcoverRouter);
 
 app.listen(PORT, () => {
     // Print localhost and detected LAN IPv4 addresses so you can connect from

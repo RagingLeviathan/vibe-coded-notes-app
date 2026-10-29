@@ -5,6 +5,9 @@ const router = Router();
 const notesController = new NotesController();
 
 router.get('/notes', notesController.getAllNotes.bind(notesController));
+// Must be registered before '/notes/:id' so "export" is not treated as an id
+router.get('/notes/export', notesController.exportNotes.bind(notesController));
+router.get('/notes/:id', notesController.getNoteById.bind(notesController));
 router.post('/notes', notesController.createNote.bind(notesController));
 router.put('/notes/:id', notesController.updateNote.bind(notesController));
 router.delete('/notes/:id', notesController.deleteNote.bind(notesController));

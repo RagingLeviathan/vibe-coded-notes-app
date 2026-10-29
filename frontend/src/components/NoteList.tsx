@@ -10,7 +10,7 @@ interface Note {
 
 interface NoteListProps {
   notes: Note[];
-  onDelete: (id: number) => void;
+  onDelete?: (id: number) => void;
   onEdit?: (note: { id: number; title: string; content: string }) => void;
 }
 
