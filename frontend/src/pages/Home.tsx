@@ -6,7 +6,7 @@ import { useNotes } from '../hooks/useNotes';
 import { exportNotes, getErrorMessage } from '../services/api';
 
 const Home: React.FC = () => {
-    const { notes, fetchNotes, addNote, editNote, removeNote, loading, error, page, totalPages, goToPage, search, searchNotes } = useNotes();
+    const { notes, addNote, editNote, removeNote, loading, error, page, total, totalPages, goToPage, search, searchNotes } = useNotes();
     const [searchParams, setSearchParams] = useSearchParams();
 
     // Local input state and debounce timer so we don't call search on every keystroke
@@ -41,85 +41,80 @@ const Home: React.FC = () => {
             setExporting(false);
         }
     };
-
     useEffect(() => {
-        fetchNotes();
-    }, [fetchNotes]);
-
-    useEffect(() => {
-        const t = setTimeout(() => {
-            // trigger search when query stabilizes
-            searchNotes(query);
-        }, 300);
-        return () => clearTimeout(t);
+        const timer = setTimeout(() => searchNotes(query), 300);
+        return () => clearTimeout(timer);
     }, [query]);
 
     return (
-        <div className="mx-auto p-4 max-w-3xl">
-            <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
-                <h1 className="text-4xl font-extrabold text-blue-700 dark:text-blue-300">Notes</h1>
-                <div className="flex items-center gap-2 text-sm">
-                    <span className="text-gray-600 dark:text-gray-300">Backup:</span>
-                    <button onClick={() => handleExport('json')} disabled={exporting} className="px-3 py-1 rounded bg-blue-100 text-blue-800 hover:bg-blue-200 dark:bg-blue-900 dark:text-blue-100 dark:hover:bg-blue-800 disabled:opacity-50">Export JSON</button>
-                    <button onClick={() => handleExport('csv')} disabled={exporting} className="px-3 py-1 rounded bg-blue-100 text-blue-800 hover:bg-blue-200 dark:bg-blue-900 dark:text-blue-100 dark:hover:bg-blue-800 disabled:opacity-50">Export CSV</button>
+        <div className="dashboard">
+            <section className="hero-panel" aria-labelledby="dashboard-title">
+                <div className="hero-copy">
+                    <p className="eyebrow"><span className="status-dot" /> YOUR PERSONAL WEB</p>
+                    <h1 id="dashboard-title">A little space for<br /><em>big ideas.</em></h1>
+                    <p>Gather your thoughts, follow the threads, and keep everything connected.</p>
                 </div>
+                <div className="hero-art" aria-hidden="true">
+                    <span className="web-orbit web-orbit-one" />
+                    <span className="web-orbit web-orbit-two" />
+                    <span className="web-orbit web-orbit-three" />
+                    <svg className="hero-spider" viewBox="0 0 64 96" fill="none">
+                        <path d="M32 0v29M24 43l-9-8-7 5m16 8-12-2-6 7m18 0-10 5-3 9m29-24 9-8 7 5m-16 8 12-2 6 7m-18 0 10 5 3 9" />
+                        <circle cx="32" cy="40" r="7" /><ellipse cx="32" cy="53" rx="10" ry="12" />
+                    </svg>
+                    <span className="hero-art-label">A WEB OF YOUR OWN</span>
+                </div>
+            </section>
+
+            <div className="dashboard-heading flex flex-wrap items-end justify-between gap-4">
+                <div><p className="eyebrow">YOUR WORKSPACE <span className="eyebrow-line" /></p><h2>All notes</h2><p>Your ideas, all in one place.</p></div>
+                <label className="search-field">
+                    <span className="sr-only">Search notes</span>
+                    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none"><circle cx="10.5" cy="10.5" r="6.5" /><path d="m16 16 4 4" /></svg>
+                    <input type="search" placeholder="Search notes by title or content..." value={query} onChange={event => setQuery(event.target.value)} />
+                    <span className="search-hint" aria-hidden="true">⌕</span>
+                </label>
             </div>
 
-            {exportError && (
-                <div role="alert" className="mb-4 p-3 bg-red-50 dark:bg-red-900 border border-red-200 dark:border-red-700 text-sm text-red-800 dark:text-red-200 rounded">
-                    Export failed: {exportError}
-                </div>
-            )}
-            {error && (
-                <div role="alert" className="mb-4 p-3 bg-red-50 dark:bg-red-900 border border-red-200 dark:border-red-700 text-sm text-red-800 dark:text-red-200 rounded">
-                    {error}
-                </div>
-            )}
-
-            {/* Search bar */}
-            <div className="mb-4">
-                <input
-                    type="search"
-                    placeholder="Search notes by title, content or source..."
-                    value={query}
-                    onChange={(e) => setQuery(e.target.value)}
-                    className="w-full p-3 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-300"
-                />
+            <div className="flex flex-wrap gap-2 mb-4 text-sm">
+                <span>Backup:</span>
+                <button onClick={() => handleExport('json')} disabled={exporting} className="px-3 py-1 rounded bg-blue-100 text-blue-800 hover:bg-blue-200 dark:bg-blue-900 dark:text-blue-100 dark:hover:bg-blue-800 disabled:opacity-50">Export JSON</button>
+                <button onClick={() => handleExport('csv')} disabled={exporting} className="px-3 py-1 rounded bg-blue-100 text-blue-800 hover:bg-blue-200 dark:bg-blue-900 dark:text-blue-100 dark:hover:bg-blue-800 disabled:opacity-50">Export CSV</button>
             </div>
+            {exportError && <p role="alert" className="feedback feedback-error">Export failed: {exportError}</p>}
 
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
+            <div className="workspace-grid">
                 <NoteEditor
                     key={editingNote ? (editingNote.id ?? `book-${editingNote.bookId}`) : 'new'}
-                    onSave={async (note) => {
-                        const { id, ...fields } = note as any;
+                    onSave={async note => {
+                        const { id, ...fields } = note;
                         const failure = id ? await editNote(id, fields) : await addNote(fields);
                         if (!failure) setEditingNote(null);
                         return failure;
                     }}
                     onCancel={() => setEditingNote(null)}
-                    initialNote={editingNote || undefined}
+                    initialNote={editingNote}
                 />
-            </div>
 
-            <div className="mt-6">
-                <NoteList notes={notes} onDelete={removeNote} onEdit={(n) => openEditorFor(n)} />
+                <section className="notes-section" aria-labelledby="notes-list-heading">
+                    <div className="section-heading flex items-center justify-between gap-3">
+                        <div><p className="eyebrow">THE COLLECTION</p><h2 id="notes-list-heading">Your notes <span className="note-count">{total}</span></h2></div>
+                        <span className="section-meta">LATEST FIRST</span>
+                    </div>
+                    {loading && <p className="feedback" role="status">Loading notes...</p>}
+                    {error && <p className="feedback feedback-error" role="alert">{error}</p>}
+                    <NoteList notes={notes} onDelete={removeNote} onEdit={openEditorFor} />
+                    <nav className="pagination flex flex-wrap items-center gap-2" aria-label="Note pages">
+                        <button type="button" onClick={() => goToPage(page - 1)} disabled={page <= 1}>Previous</button>
+                        {Array.from({ length: totalPages }).map((_, index) => {
+                            const number = index + 1;
+                            return <button type="button" key={number} onClick={() => goToPage(number)} aria-current={number === page ? 'page' : undefined} className={number === page ? 'is-current' : ''}>{number}</button>;
+                        })}
+                        <button type="button" onClick={() => goToPage(page + 1)} disabled={page >= totalPages}>Next</button>
+                    </nav>
+                </section>
             </div>
-
-            {loading && <p className="mt-4 text-gray-600 dark:text-gray-300">Loading...</p>}
-
-            {/* Pagination */}
-            <div className="mt-6 flex items-center space-x-2">
-                <button onClick={() => goToPage(page - 1)} disabled={page <= 1} className="px-3 py-1 bg-blue-100 dark:bg-blue-900 dark:text-white rounded disabled:opacity-50">Prev</button>
-                {Array.from({ length: totalPages }).map((_, idx) => {
-                    const p = idx + 1;
-                    return (
-                        <button key={p} onClick={() => goToPage(p)} className={`px-3 py-1 rounded ${p === page ? 'bg-blue-600 text-white' : 'bg-blue-50 dark:bg-gray-700 dark:text-gray-200'}`}>
-                            {p}
-                        </button>
-                    );
-                })}
-                <button onClick={() => goToPage(page + 1)} disabled={page >= totalPages} className="px-3 py-1 bg-blue-100 dark:bg-blue-900 dark:text-white rounded disabled:opacity-50">Next</button>
-            </div>
+            <footer className="dashboard-footer"><span>MADE FOR YOUR MIND</span><span>Take it one thread at a time.</span></footer>
         </div>
     );
 };

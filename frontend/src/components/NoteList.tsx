@@ -1,27 +1,20 @@
 import React from 'react';
-import NoteItem from './NoteItem';
-
-interface Note {
-  id: number;
-  title: string;
-  content: string;
-  createdAt?: string;
-}
+import NoteItem, { NoteData } from './NoteItem';
 
 interface NoteListProps {
-  notes: Note[];
+  notes: NoteData[];
   onDelete?: (id: number) => void;
-  onEdit?: (note: { id: number; title: string; content: string }) => void;
+  onEdit?: (note: Omit<NoteData, 'createdAt'>) => void;
 }
 
 const NoteList: React.FC<NoteListProps> = ({ notes, onDelete, onEdit }) => {
   return (
     <div className="note-list">
       {notes.length === 0 ? (
-        <p>No notes available.</p>
+        <div className="empty-state"><span aria-hidden="true">✧</span><p>No notes available.</p><small>There is room here for your next idea.</small></div>
       ) : (
         notes.map(note => (
-          <NoteItem key={note.id} note={note as any} onDelete={onDelete} onEdit={onEdit} />
+          <NoteItem key={note.id} note={note} onDelete={onDelete} onEdit={onEdit} />
         ))
       )}
     </div>

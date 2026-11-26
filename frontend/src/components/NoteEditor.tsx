@@ -5,31 +5,27 @@ interface Note {
     id?: number;
     title: string;
     content: string;
-    sourceShort?: string;
-    sourceFull?: string;
+    sourceShort?: string | null;
+    sourceFull?: string | null;
     bookId?: number | null;
     bookTitle?: string | null;
     bookSlug?: string | null;
 }
 
 interface NoteEditorProps {
-    // Resolve to an error message string when the save fails (the editor keeps its content), or null on success
     onSave: (note: Note) => Promise<string | null> | string | null | void;
     initialNote?: Partial<Note> | null;
     onCancel?: () => void;
 }
 
-const MAX_TITLE = 255;
-const MAX_CONTENT = 15000;
-
-const toLinkedBook = (n?: Partial<Note> | null): LinkedBook | null =>
-    n && n.bookId ? { bookId: n.bookId, bookTitle: n.bookTitle || 'Untitled', bookSlug: n.bookSlug || null } : null;
+const toLinkedBook = (note?: Partial<Note> | null): LinkedBook | null =>
+    note && note.bookId ? { bookId: note.bookId, bookTitle: note.bookTitle || 'Untitled', bookSlug: note.bookSlug || null } : null;
 
 const NoteEditor: React.FC<NoteEditorProps> = ({ onSave, initialNote, onCancel }) => {
-    const [title, setTitle] = useState(initialNote ? initialNote.title || '' : '');
-    const [content, setContent] = useState(initialNote ? initialNote.content || '' : '');
-    const [sourceShort, setSourceShort] = useState(initialNote ? (initialNote.sourceShort || '') : '');
-    const [sourceFull, setSourceFull] = useState(initialNote ? (initialNote.sourceFull || '') : '');
+    const [title, setTitle] = useState(initialNote?.title || '');
+    const [content, setContent] = useState(initialNote?.content || '');
+    const [sourceShort, setSourceShort] = useState(initialNote?.sourceShort || '');
+    const [sourceFull, setSourceFull] = useState(initialNote?.sourceFull || '');
     const [book, setBook] = useState<LinkedBook | null>(toLinkedBook(initialNote));
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -47,38 +43,26 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ onSave, initialNote, onCancel }
 
     const handleSave = async () => {
         if (saving) return;
-        if (title.trim() === '' || content.trim() === '') {
+        if (!title.trim() || !content.trim()) {
             setError('Title and content are required.');
             return;
         }
-        if (title.trim().length > MAX_TITLE) {
-            setError(`Title must be at most ${MAX_TITLE} characters.`);
+        if (title.trim().length > 255 || content.trim().length > 15000) {
+            setError(title.trim().length > 255 ? 'Title must be at most 255 characters.' : 'Content must be at most 15000 characters.');
             return;
         }
-        if (content.trim().length > MAX_CONTENT) {
-            setError(`Content must be at most ${MAX_CONTENT} characters.`);
-            return;
-        }
-
         const note: Note = {
-            title,
-            content,
-            sourceShort,
-            sourceFull,
+            title, content, sourceShort, sourceFull,
             bookId: book ? book.bookId : null,
             bookTitle: book ? book.bookTitle : null,
             bookSlug: book ? book.bookSlug || null : null,
         };
-        if (initialNote && initialNote.id) {
-            note.id = initialNote.id;
-        }
-
+        if (initialNote?.id) note.id = initialNote.id;
         setSaving(true);
         setError(null);
         try {
             const failure = await onSave(note);
             if (failure) {
-                // Keep everything the user typed so nothing is lost
                 setError(failure);
             } else {
                 setTitle('');
@@ -93,85 +77,23 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ onSave, initialNote, onCancel }
     };
 
     return (
-        <div className="note-editor p-6 border border-gray-300 dark:border-gray-700 rounded shadow-lg bg-white dark:bg-gray-800">
-            <h2 className="text-2xl font-semibold mb-4 text-blue-700 dark:text-blue-300">{initialNote && initialNote.id ? 'Edit Note' : 'Note Editor'}</h2>
-
-            {/* Constrain width on large screens and center */}
-            <div className="max-w-5xl mx-auto">
-                {/**
-                 * Responsive layout:
-                 * - mobile: stack fields (1 column)
-                 * - sm and up: 12-column layout
-                 * - md and up: give content more room and enlarge textarea/button
-                 */}
-                <div className="grid grid-cols-1 sm:grid-cols-12 gap-4 items-start">
-                {/* Row 1: Title on its own full-width line */}
-                <input
-                    type="text"
-                    placeholder="Title"
-                    value={title}
-                    onChange={(e) => setTitle(e.target.value)}
-                    className="col-span-1 sm:col-span-12 p-3 mb-2 border rounded border-blue-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-300 w-full"
-                />
-
-                {/* Row 2: Content takes full available width beneath the title */}
-                <textarea
-                    placeholder="Content"
-                    value={content}
-                    onChange={(e) => setContent(e.target.value)}
-                    className="col-span-1 sm:col-span-12 p-3 mb-2 border rounded border-blue-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-300 w-full h-40 md:h-56 resize-y"
-                    rows={4}
-                />
-
-                {/* Row 2: source fields span full width on small screens, split on larger */}
-                <input
-                    type="text"
-                    placeholder="Source (short)"
-                    value={sourceShort}
-                    onChange={(e) => setSourceShort(e.target.value)}
-                    className="col-span-1 sm:col-span-6 p-2 border rounded border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 w-full"
-                />
-
-                <input
-                    type="text"
-                    placeholder="Source (full)"
-                    value={sourceFull}
-                    onChange={(e) => setSourceFull(e.target.value)}
-                    className="col-span-1 sm:col-span-6 p-2 border rounded border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 w-full"
-                />
-
-                {/* Optional Hardcover book link */}
+        <section className="editor-panel" aria-labelledby="editor-heading">
+            <div className="editor-topline"><span className="editor-icon" aria-hidden="true">✦</span><span>THE START OF SOMETHING</span></div>
+            <h2 id="editor-heading">{initialNote?.id ? 'Edit note' : 'Create a note'}</h2>
+            <p className="editor-description">{initialNote?.id ? 'Pick up where you left off.' : 'Capture a thought before it floats away.'}</p>
+            <div className="editor-fields">
+                <label>Title<input type="text" placeholder="Title" value={title} onChange={event => setTitle(event.target.value)} /></label>
+                <label>Content<textarea placeholder="Content" value={content} onChange={event => setContent(event.target.value)} rows={7} /></label>
+                <div className="source-heading"><span>ADD A SOURCE</span><span>OPTIONAL</span></div>
+                <label>Short source<input type="text" placeholder="Source (short)" value={sourceShort} onChange={event => setSourceShort(event.target.value)} /></label>
+                <label>Full source<input type="text" placeholder="Source (full)" value={sourceFull} onChange={event => setSourceFull(event.target.value)} /></label>
                 <BookPicker value={book} onChange={setBook} />
-
-                {error && (
-                    <div role="alert" className="col-span-1 sm:col-span-12 p-3 bg-red-50 dark:bg-red-900 border border-red-200 dark:border-red-700 text-sm text-red-800 dark:text-red-200 rounded">
-                        {error}
-                    </div>
-                )}
-
-                {/* Row 3: button centered on larger screens, full width on mobile */}
-                <div className="col-span-1 sm:col-span-12 flex justify-center gap-3">
-                    <button
-                        onClick={handleSave}
-                        disabled={saving}
-                        className="w-full sm:w-auto bg-blue-600 dark:bg-blue-500 text-white px-6 py-3 rounded shadow-md hover:bg-blue-700 dark:hover:bg-blue-600 text-lg disabled:opacity-60"
-                    >
-                        {saving ? 'Saving…' : initialNote && initialNote.id ? 'Update' : 'Save Note'}
-                    </button>
-                    {initialNote && onCancel && (
-                        <button
-                            onClick={onCancel}
-                            disabled={saving}
-                            className="w-full sm:w-auto bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-100 px-6 py-3 rounded hover:bg-gray-300 dark:hover:bg-gray-600 text-lg"
-                        >
-                            Cancel
-                        </button>
-                    )}
-                </div>
-
+                {error && <p className="feedback feedback-error" role="alert">{error}</p>}
+                <button type="button" className="primary-button" onClick={handleSave} disabled={saving}><span aria-hidden="true">＋</span> {saving ? 'Saving…' : initialNote?.id ? 'Update note' : 'Save note'}</button>
+                {initialNote && onCancel && <button type="button" onClick={onCancel} disabled={saving}>Cancel</button>}
             </div>
-            </div>
-        </div>
+            <p className="editor-footnote"><span aria-hidden="true">✧</span> Every idea starts somewhere.</p>
+        </section>
     );
 };
 

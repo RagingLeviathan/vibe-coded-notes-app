@@ -86,7 +86,9 @@ export class NotesService {
             ]
         );
         const insertId = result.insertId as number;
-        return (await this.getNoteById(insertId)) as Note;
+        const note = await this.getNoteById(insertId);
+        if (!note) throw new Error('Created note could not be retrieved');
+        return note;
     }
 
     async updateNote(id: number, noteData: Partial<Note>): Promise<Note | null> {
@@ -108,7 +110,7 @@ export class NotesService {
 
     async deleteNote(id: number): Promise<boolean> {
         const result: any = await db.query('DELETE FROM notes_logs WHERE id = ?', [id]);
-        // For MySQL, affectedRows indicates deletion count
-        return (result.affectedRows || result.affectedRows === 0) ? result.affectedRows > 0 : true;
+        if (typeof result.affectedRows !== 'number') throw new Error('Invalid delete result from database');
+        return result.affectedRows > 0;
     }
 }

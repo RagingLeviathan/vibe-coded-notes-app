@@ -23,11 +23,36 @@ const toCsv = (notes: Note[]): string => {
     return '\uFEFF' + lines.join('\r\n') + '\r\n';
 };
 
+function getNoteId(req: Request, res: Response): number | undefined {
+    const raw = String(req.params.id);
+    const id = Number(raw);
+    if (!/^[1-9]\d*$/.test(raw) || !Number.isSafeInteger(id)) {
+        res.status(400).json({ message: 'Invalid note ID' });
+        return undefined;
+    }
+    return id;
+}
+
 class NotesController {
     private notesService: NotesService;
 
     constructor() {
         this.notesService = new NotesService();
+    }
+
+    public async getNoteById(req: Request, res: Response): Promise<void> {
+        const id = getNoteId(req, res);
+        if (id === undefined) return;
+        try {
+            const note = await this.notesService.getNoteById(id);
+            if (!note) {
+                res.status(404).json({ message: 'Note not found' });
+                return;
+            }
+            res.status(200).json(note);
+        } catch (error) {
+            res.status(500).json({ message: 'Error retrieving note', error });
+        }
     }
 
     public async getAllNotes(req: Request, res: Response): Promise<void> {
@@ -66,24 +91,6 @@ class NotesController {
         }
     }
 
-    public async getNoteById(req: Request, res: Response): Promise<void> {
-        try {
-            const id = parseInt(String(req.params.id), 10);
-            if (Number.isNaN(id)) {
-                res.status(400).json({ message: 'Invalid note id' });
-                return;
-            }
-            const note = await this.notesService.getNoteById(id);
-            if (!note) {
-                res.status(404).json({ message: 'Note not found' });
-                return;
-            }
-            res.status(200).json(note);
-        } catch (error) {
-            res.status(500).json({ message: 'Error retrieving note', error });
-        }
-    }
-
     public async createNote(req: Request, res: Response): Promise<void> {
         try {
             console.log('POST /api/notes body ->', req.body);
@@ -100,12 +107,9 @@ class NotesController {
     }
 
     public async updateNote(req: Request, res: Response): Promise<void> {
+        const id = getNoteId(req, res);
+        if (id === undefined) return;
         try {
-            const id = parseInt(String(req.params.id), 10);
-            if (Number.isNaN(id)) {
-                res.status(400).json({ message: 'Invalid note id' });
-                return;
-            }
             console.log(`PUT /api/notes/${id} body ->`, req.body);
             const { errors, value } = validateNoteInput(req.body, 'update');
             if (Object.keys(errors).length > 0) {
@@ -124,13 +128,14 @@ class NotesController {
     }
 
     public async deleteNote(req: Request, res: Response): Promise<void> {
+        const id = getNoteId(req, res);
+        if (id === undefined) return;
         try {
-            const id = parseInt(String(req.params.id), 10);
-            if (Number.isNaN(id)) {
-                res.status(400).json({ message: 'Invalid note id' });
+            const deleted = await this.notesService.deleteNote(id);
+            if (!deleted) {
+                res.status(404).json({ message: 'Note not found' });
                 return;
             }
-            await this.notesService.deleteNote(id);
             res.status(204).send();
         } catch (error) {
             res.status(500).json({ message: 'Error deleting note', error });

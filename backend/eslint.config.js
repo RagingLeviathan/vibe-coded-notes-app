@@ -14,5 +14,10 @@ module.exports = tseslint.config(
             '@typescript-eslint/no-explicit-any': 'off',
             '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
         },
-    }
+    },
+    {
+        files: ['test/**/*.js'],
+        languageOptions: { globals: { ...globals.node, fetch: 'readonly' } },
+        rules: { '@typescript-eslint/no-require-imports': 'off' },
+    },
 );

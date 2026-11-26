@@ -30,17 +30,16 @@ const Header: React.FC = () => {
     `text-sm hover:opacity-100 dark:text-white ${isActive ? 'opacity-100 font-semibold underline' : 'opacity-90'}`;
 
   return (
-    <header className="bg-blue-600 text-white dark:bg-blue-700">
-      <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
-        <Link to="/" className="text-2xl font-semibold">Notes App</Link>
-        <nav className="hidden md:flex space-x-4" aria-label="Main">
+    <div className="site-nav mx-auto max-w-7xl px-4 sm:px-6">
+      <div className="flex items-center justify-between">
+        <nav className="hidden md:flex flex-wrap gap-4" aria-label="Main">
           {NAV_LINKS.map((l) => (
             <NavLink key={l.to} to={l.to} end={l.to === '/'} className={linkClass}>{l.label}</NavLink>
           ))}
         </nav>
         <button
           type="button"
-          className="md:hidden p-2 rounded hover:bg-blue-700 dark:hover:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-white"
+          className="md:hidden p-2 rounded"
           aria-label={open ? 'Close menu' : 'Open menu'}
           aria-expanded={open}
           aria-controls="mobile-nav"
@@ -56,7 +55,7 @@ const Header: React.FC = () => {
         </button>
       </div>
       {open && (
-        <nav id="mobile-nav" className="md:hidden border-t border-blue-500 dark:border-blue-600 px-4 pb-3" aria-label="Main">
+        <nav id="mobile-nav" className="md:hidden pb-3" aria-label="Main">
           <ul>
             {NAV_LINKS.map((l) => (
               <li key={l.to}>
@@ -66,31 +65,98 @@ const Header: React.FC = () => {
           </ul>
         </nav>
       )}
-    </header>
+    </div>
   );
 };
 
+type Theme = 'system' | 'light' | 'dark';
+type Accent = 'violet' | 'teal' | 'blue';
+
+const isTheme = (value: string | null): value is Theme =>
+  value === 'system' || value === 'light' || value === 'dark';
+const isAccent = (value: string | null): value is Accent =>
+  value === 'violet' || value === 'teal' || value === 'blue';
+
+function initialAppearance(): { theme: Theme; accent: Accent; storageError: boolean } {
+  try {
+    const theme = localStorage.getItem('notes-theme');
+    const accent = localStorage.getItem('notes-accent');
+    return { theme: isTheme(theme) ? theme : 'system', accent: isAccent(accent) ? accent : 'violet', storageError: false };
+  } catch (error) {
+    console.warn('Could not read appearance preferences:', error);
+    return { theme: 'system', accent: 'violet', storageError: true };
+  }
+}
+
 const App: React.FC = () => {
+  const [appearance, setAppearance] = useState(initialAppearance);
+  const { theme, accent, storageError } = appearance;
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+    document.documentElement.dataset.accent = accent;
+    try {
+      localStorage.setItem('notes-theme', theme);
+      localStorage.setItem('notes-accent', accent);
+      setAppearance(current => current.storageError ? { ...current, storageError: false } : current);
+    } catch (error) {
+      console.warn('Could not save appearance preferences:', error);
+      setAppearance(current => current.storageError ? current : { ...current, storageError: true });
+    }
+  }, [theme, accent]);
+
+  useEffect(() => {
+    const preference = window.matchMedia('(prefers-color-scheme: dark)');
+    const applyTheme = () => document.documentElement.classList.toggle('dark', theme === 'dark' || (theme === 'system' && preference.matches));
+    applyTheme();
+    preference.addEventListener('change', applyTheme);
+    return () => preference.removeEventListener('change', applyTheme);
+  }, [theme]);
+
   return (
     <Router>
-      <div className="min-h-screen bg-gradient-to-b from-blue-50 via-white to-blue-50 dark:from-blue-900 dark:via-black dark:to-black">
-        <Header />
-
-        <main className="max-w-4xl mx-auto px-4 py-8">
+      <div className="app-shell min-h-screen">
+        <header className="site-header">
+          <div className="site-header-inner mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4 px-4 sm:px-6">
+            <Link className="brand flex items-center gap-3" to="/" aria-label="Notes App home">
+              <span className="brand-mark" aria-hidden="true">
+                <svg viewBox="0 0 48 48" fill="none">
+                  <path d="M24 3v42M3 24h42M9 9l30 30M39 9 9 39M24 11l9 4 4 9-4 9-9 4-9-4-4-9 4-9 9-4ZM24 17l5 2 2 5-2 5-5 2-5-2-2-5 2-5 5-2Z" />
+                  <circle cx="24" cy="24" r="2.5" />
+                </svg>
+              </span>
+              <span><span className="brand-name">Notes App</span><span className="brand-subtitle">YOUR PERSONAL WEB</span></span>
+            </Link>
+            <div className="appearance-controls flex flex-wrap items-center gap-3" aria-label="Appearance settings">
+              <label className="appearance-label">Theme
+                <select value={theme} onChange={event => {
+                  const value = event.target.value;
+                  if (isTheme(value)) setAppearance(current => ({ ...current, theme: value }));
+                }}>
+                  <option value="system">System</option><option value="light">Light</option><option value="dark">Dark</option>
+                </select>
+              </label>
+              <label className="appearance-label">Accent
+                <select value={accent} onChange={event => {
+                  const value = event.target.value;
+                  if (isAccent(value)) setAppearance(current => ({ ...current, accent: value }));
+                }}>
+                  <option value="violet">Violet</option><option value="teal">Teal</option><option value="blue">Blue</option>
+                </select>
+              </label>
+            </div>
+          </div>
+          <Header />
+          {storageError && <p className="storage-warning" role="status">Appearance settings could not be saved in this browser.</p>}
+        </header>
+        <main className="mx-auto max-w-7xl px-4 pb-12 sm:px-6">
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/search" element={<SearchNotes />} />
             <Route path="/notes/:id" element={<NoteDetail />} />
             <Route path="/hardcover" element={<Hardcover />} />
             <Route path="/graphql-example" element={<GraphqlExample />} />
-            <Route
-              path="/my-books"
-              element={
-                <Suspense fallback={<div>Loading...</div>}>
-                  <MyBooksLazy />
-                </Suspense>
-              }
-            />
+            <Route path="/my-books" element={<Suspense fallback={<div>Loading...</div>}><MyBooksLazy /></Suspense>} />
             <Route path="/search-books" element={<SearchBooks />} />
           </Routes>
         </main>

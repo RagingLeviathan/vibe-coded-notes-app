@@ -1,5 +1,5 @@
 module.exports = {
-  darkMode: 'media', // use the user's OS/browser preference (prefers-color-scheme)
+  darkMode: 'class',
   content: ['./src/**/*.{js,jsx,ts,tsx}'],
   theme: {
     extend: {},

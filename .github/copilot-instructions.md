@@ -6,7 +6,7 @@ Inspect relevant package.json files for actual dependencies and commands.
 
 # Project facts
 - Stack: React 17 + Vite + Tailwind v2 (frontend/, port 3000); Express + TypeScript run with
-  ts-node and mysql2 (backend/, port 5000); MySQL/MariaDB (XAMPP) on 127.0.0.1:3306, database `notes`.
+  ts-node and mysql2 (backend/, port 5000); MySQL/MariaDB on 127.0.0.1:3306 by default, database `notes`.
 - Vite proxies `/api` to http://localhost:5000, so the frontend uses relative `/api/...` URLs.
 - Run: `npm run dev` in backend/ (nodemon auto-restart) and in frontend/. `npm start` in backend/
   does NOT reload on changes; restart it after backend edits.
@@ -54,7 +54,7 @@ Inspect relevant package.json files for actual dependencies and commands.
 - Use MariaDB-compatible SQL and the existing schema/migration workflow.
 
 # Styling
-- The frontend uses Tailwind CSS v2 with `darkMode: 'media'` (follows the OS setting).
+- The frontend uses Tailwind CSS v2 with `darkMode: 'class'`; App.tsx applies the class based on the selected theme or OS setting.
   Every new or changed UI element must work in both light and dark mode: pair each
   light color class with a `dark:` variant (backgrounds, borders, text), matching existing components.
 - Tailwind v2 has no color opacity slash syntax (e.g. `bg-blue-400/10`); it is silently ignored.
