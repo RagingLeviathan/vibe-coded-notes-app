@@ -14,7 +14,7 @@ notes-app
 │   ├── public
 │   │   └── index.html      # Main HTML file
 │   └── src
-│       ├── main.tsx        # Entry point for React app
+│       ├── index.tsx       # Entry point for React app
 │       ├── App.tsx         # Main App component
 │       ├── pages
 │       │   └── Home.tsx    # Home page component
@@ -48,7 +48,8 @@ notes-app
 │       ├── 001_create_notes_table.sql # Legacy notes table
 │       ├── 002_add_source_fields.sql # Legacy migration
 │       ├── 003_create_notes_logs_table.sql
-│       └── 004_add_book_link.sql
+│       ├── 004_add_book_link.sql
+│       └── 005_create_source_tags.sql
 ├── .gitignore         # Files to ignore in version control
 └── README.md          # Project documentation
 ```
@@ -69,7 +70,7 @@ The following steps are for Windows and a **new, empty** local database. If you 
 
 2. **Create the database.** On the same computer, open [phpMyAdmin](http://localhost/phpmyadmin/) or choose phpMyAdmin from WampServer's tray menu. Log in using the database credentials for the chosen server. If phpMyAdmin offers a server choice, select the MySQL or MariaDB instance you intend to use. In its **SQL** tab run `SELECT @@port;` and note the result for step 4. Click **New** in the left sidebar, enter `notes` as the database name, choose `utf8mb4_unicode_ci` if available, and click **Create**. If `notes` already exists, do not recreate or delete it: inspect it and back it up before proceeding.
 
-3. **Create or upgrade the table.** In phpMyAdmin, select the `notes` database and open its **SQL** tab. For a new database, run [db/schema.sql](db/schema.sql), which creates `notes_logs` including the Hardcover fields. Migration 003 creates the base `notes_logs` table and migration 004 adds the book fields. Migrations 001 and 002 are legacy; do not run them for a fresh setup.
+3. **Create or upgrade the tables.** In phpMyAdmin, select the `notes` database and open its **SQL** tab. For a new database, run [db/schema.sql](db/schema.sql), which creates `notes_logs` and `source_tags`. Migration 003 creates the base `notes_logs` table, migration 004 adds the book fields, and migration 005 creates `source_tags`. Migrations 001 and 002 are legacy; do not run them for a fresh setup.
 
    If `notes_logs` already exists, back it up and inspect its columns and indexes first. An existing table created using the earlier setup instructions needs `book_id`, `book_title`, and `book_slug`. For MariaDB, run [migration 004](db/migrations/004_add_book_link.sql). On MySQL, its `IF NOT EXISTS` syntax may not be supported: if all three book columns and the index are absent, run the following instead. If any already exist, add only the missing ones.
 
@@ -82,6 +83,8 @@ The following steps are for Windows and a **new, empty** local database. If you 
    ```
 
    The earlier table also lacked `updated_at`; if it is absent, add it with `ALTER TABLE notes_logs ADD COLUMN updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP;`.
+
+   For an existing installation, back up the database, then run [migration 005](db/migrations/005_create_source_tags.sql) in the selected `notes` database. It creates the separate `source_tags` table without changing existing notes. The backend needs this table when saving notes with a short source.
 
 4. **Configure the backend.** In VS Code, create a file named `.env` in the `backend` folder (not in the project root). This example uses a local `root` account without a password on port `3306`:
 
@@ -135,7 +138,7 @@ For backend-proxied Hardcover features, configure `HARDCOVER_TOKEN` in `backend\
 
 Search Books and My Books show covers, ratings, genres, and series when available from Hardcover. Cover images load directly from their external image URLs in each browser; a placeholder appears if a cover is missing or fails to load.
 
-Both projects provide `npm.cmd run typecheck`, `npm.cmd run lint`, and `npm.cmd run check`. The frontend has a pre-existing type error in `src/main.tsx` (`react-dom/client` with React 17).
+Both projects provide `npm.cmd run typecheck`, `npm.cmd run lint`, and `npm.cmd run check`.
 
 ### Usage
 
@@ -158,7 +161,7 @@ Recommended options:
 
 Before going live:
 
-- Run migrations 003 and 004 on the production database.
+- Run migrations 003, 004, and 005 on the production database.
 - Build the backend with `npx tsc` and start it with `node dist/...` (or keep `ts-node` for small deployments); don't use `nodemon` in production.
 - Keep `backend/.env` and tokens out of git; set them as host environment variables.
 - The app has no login, so anyone who can reach it can read, edit and delete notes. Put it behind authentication (e.g. HTTP basic auth at nginx, Cloudflare Access) or keep it private.
@@ -179,6 +182,7 @@ This project is licensed under the MIT License.
 - Create notes with a title and body.
 - Edit existing notes and delete notes from the note list.
 - Add optional short and full source references to a note.
+- Manage shared source tags that map a short source code to a full source and a Hardcover book.
 - Display creation timestamps in the local date and time format.
 - Refresh note data automatically after create, update, and delete actions.
 - Refresh visible pages every 10 seconds and when returning to a tab, so changes from other clients appear without a manual reload. The current page, search, and unsaved editor text are retained.
@@ -194,7 +198,7 @@ This project is licensed under the MIT License.
 
 ### User Interface
 
-- Responsive Orb Weaver interface built with Tailwind CSS, with a spider-web motif and space for optional banner artwork.
+- Responsive Orb Weaver interface built with Tailwind CSS, featuring Spider Fizz artwork and a spider-web motif.
 - Choose system, light, or dark appearance and a violet, teal, or blue accent in the header. Preferences are saved in the current browser.
 - Mobile-friendly stacked dashboard and desktop editor-and-notes layout.
 - Resizable content textarea.
@@ -220,8 +224,19 @@ This project is licensed under the MIT License.
 | `POST`   | `/api/notes`                         | Create a note                                                |
 | `PUT`    | `/api/notes/:id`                     | Update a note by ID                                          |
 | `DELETE` | `/api/notes/:id`                     | Delete a note by ID                                          |
+| `GET`    | `/api/source-tags`                   | List saved source tags                                       |
+| `POST`   | `/api/source-tags`                   | Create a source tag and synchronize matching notes           |
+| `PUT`    | `/api/source-tags/:id`               | Update a tag and synchronize matching notes                  |
 
 The list endpoint returns `{ data, total, page, limit, q }`. Successful creates and updates return the saved note including its source fields, and deletes return HTTP `204 No Content`. GET, PUT, and DELETE by ID return `404` when the note does not exist and `400` for an invalid ID.
+
+### Shared source tags
+
+Open **Source Tags** to create a short code, full source, and linked Hardcover book. Save prompts for confirmation because it replaces the full source and book on all existing notes with that exact, case-sensitive short source. Renaming also updates notes matching the new code, so review both codes before confirming. The response reports how many notes matched; duplicate saved codes are rejected.
+
+Adding a source or a book directly to an individual note does not create a shared tag. To manage those notes together, create a tag with their existing short source in **Source Tags**.
+
+Choose a saved tag in the note editor, or supply its short code when creating or updating a note through the API or Discord. When a matching short source is supplied, the saved full source and book take precedence over values in the same request. Notes with other codes retain their own source and book. If an update omits the short source, only the supplied fields are changed. Unsaved drafts in other browsers can overwrite newer changes, as with other note edits.
 
 ## Configuration
 
@@ -249,7 +264,7 @@ The frontend uses `/api/notes` and Vite proxies `/api` requests to `http://local
 
 The header's Theme and Accent controls apply to the current browser and are remembered using local storage. System mode follows the device's light or dark preference. If browser storage is unavailable, the dashboard displays a warning and settings apply only until the page is reloaded.
 
-The banner uses a built-in decorative web and spider; no image files are required. To add your own optional artwork, place an image in `frontend/public` and set `--hero-art-image` in `frontend/src/styles/index.css`, for example `url('/orb-weaver-banner.png')`. The image is decorative and appears behind the banner artwork.
+The supplied Spider Fizz artwork appears in the header, dashboard banner, note editor, and dashboard footer. Its tint follows the selected accent. To add optional banner background artwork, place an image in `frontend/public` and set `--hero-art-image` in `frontend/src/styles/index.css`, for example `url('/orb-weaver-banner.png')`. It appears behind the banner artwork.
 
 ## Future Proposals: Security and Discord Command Registration
 
@@ -310,7 +325,7 @@ The application uses a `notes_logs` table with the following core fields:
 - `created_at` — note creation timestamp.
 - `updated_at` — last update timestamp.
 
-Use [db/schema.sql](db/schema.sql) for a new database, or migrations 003 and 004. The first two migrations are legacy.
+Use [db/schema.sql](db/schema.sql) for a new database, or migrations 003, 004, and 005. The first two migrations are legacy.
 
 ## Technology Stack
 

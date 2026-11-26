@@ -29,6 +29,29 @@ export interface NoteInput {
     bookSlug?: string | null;
 }
 
+export interface SourceTag {
+    id: number;
+    sourceShort: string;
+    sourceFull: string;
+    bookId: number;
+    bookTitle: string;
+    bookSlug: string | null;
+}
+
+export type SourceTagInput = Omit<SourceTag, 'id'>;
+
+export const fetchSourceTags = async (): Promise<SourceTag[]> => {
+    const response = await axios.get<SourceTag[]>('/api/source-tags');
+    return response.data;
+};
+
+export const saveSourceTag = async (tag: SourceTagInput, id?: number): Promise<{ updatedNotes: number }> => {
+    const response = id === undefined
+        ? await axios.post('/api/source-tags', tag)
+        : await axios.put(`/api/source-tags/${id}`, tag);
+    return response.data;
+};
+
 // Turns an axios/network error into a readable message, including backend field errors
 export const getErrorMessage = (err: any): string => {
     const data = err && err.response && err.response.data;

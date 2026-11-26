@@ -7,9 +7,11 @@ const { setRoutes } = require('../src/routes/notes');
 
 test('note ID routes return the note, validate IDs, and report missing records', async t => {
   const originalQuery = db.query;
+  const originalTransaction = db.transaction;
   const note = { id: 1, title: 'Title', content: 'Body', sourceShort: 'Short', sourceFull: 'Full', bookId: 7, bookTitle: 'Book', bookSlug: 'book' };
   let present = true;
   db.query = async (sql, params) => {
+    if (sql.includes('FROM source_tags')) return [];
     if (sql.startsWith('SELECT')) {
       assert.match(sql, /source_short AS sourceShort/);
       assert.match(sql, /source_full AS sourceFull/);
@@ -26,6 +28,7 @@ test('note ID routes return the note, validate IDs, and report missing records',
     if (sql.startsWith('UPDATE')) return { affectedRows: 0 };
     throw new Error(`Unexpected query: ${sql}`);
   };
+  db.transaction = async work => work({ query: async (sql, params) => [await db.query(sql, params)] });
   const app = express();
   app.use(express.json());
   setRoutes(app);
@@ -33,6 +36,7 @@ test('note ID routes return the note, validate IDs, and report missing records',
   await new Promise(resolve => server.once('listening', resolve));
   t.after(() => {
     db.query = originalQuery;
+    db.transaction = originalTransaction;
     server.close();
   });
   const base = `http://127.0.0.1:${server.address().port}/api/notes`;

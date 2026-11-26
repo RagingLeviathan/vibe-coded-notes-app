@@ -58,10 +58,7 @@ const Home: React.FC = () => {
                     <span className="web-orbit web-orbit-one" />
                     <span className="web-orbit web-orbit-two" />
                     <span className="web-orbit web-orbit-three" />
-                    <svg className="hero-spider" viewBox="0 0 64 96" fill="none">
-                        <path d="M32 0v29M24 43l-9-8-7 5m16 8-12-2-6 7m18 0-10 5-3 9m29-24 9-8 7 5m-16 8 12-2 6 7m-18 0 10 5 3 9" />
-                        <circle cx="32" cy="40" r="7" /><ellipse cx="32" cy="53" rx="10" ry="12" />
-                    </svg>
+                    <img className="spider-fizz hero-spider" src={new URL('../../spider-fizz-hero-idle.png', import.meta.url).href} alt="" />
                     <span className="hero-art-label">A WEB OF YOUR OWN</span>
                 </div>
             </section>
@@ -114,7 +111,10 @@ const Home: React.FC = () => {
                     </nav>
                 </section>
             </div>
-            <footer className="dashboard-footer"><span>MADE FOR YOUR MIND</span><span>Take it one thread at a time.</span></footer>
+            <footer className="dashboard-footer">
+                <span>MADE FOR YOUR MIND</span>
+                <span className="footer-mascot"><span>Take it one thread at a time.</span><img className="spider-fizz" src={new URL('../../spider-fizz-crawl-side.png', import.meta.url).href} alt="" loading="lazy" /></span>
+            </footer>
         </div>
     );
 };

@@ -11,10 +11,11 @@ export interface LinkedBook {
 interface BookPickerProps {
     value: LinkedBook | null;
     onChange: (book: LinkedBook | null) => void;
+    required?: boolean;
 }
 
 // Optional control for linking a note to a Hardcover book
-const BookPicker: React.FC<BookPickerProps> = ({ value, onChange }) => {
+const BookPicker: React.FC<BookPickerProps> = ({ value, onChange, required = false }) => {
     const [open, setOpen] = useState(false);
     const [term, setTerm] = useState('');
     const [results, setResults] = useState<BookHit[]>([]);
@@ -51,7 +52,7 @@ const BookPicker: React.FC<BookPickerProps> = ({ value, onChange }) => {
     return (
         <div>
             <div className="flex flex-wrap items-center gap-2">
-                <span className="text-sm text-gray-600 dark:text-gray-300">Book (optional):</span>
+                <span className="text-sm text-gray-600 dark:text-gray-300">Book ({required ? 'required' : 'optional'}):</span>
                 {value ? <BookTag title={value.bookTitle} slug={value.bookSlug} /> : <span className="text-sm text-gray-500 dark:text-gray-400">none</span>}
                 <button type="button" onClick={() => setOpen(!open)} className="text-sm px-2 py-1 rounded bg-purple-100 text-purple-800 hover:bg-purple-200 dark:bg-purple-900 dark:text-purple-100 dark:hover:bg-purple-800">
                     {open ? 'Close' : value ? 'Change' : 'Link a book'}

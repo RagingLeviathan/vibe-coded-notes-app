@@ -27,8 +27,6 @@ Inspect relevant package.json files for actual dependencies and commands.
 - Hardcover's GraphQL API rejects `_ilike`/`_like` filters. For text search use its `search(query,
   query_type, per_page, page) { results }` query (Typesense JSON: `results.hits[].document`, `results.found`).
 - Windows/PowerShell: run `npx.cmd` instead of `npx` (script execution is disabled).
-- Pre-existing type error: `react-dom/client` in frontend/src/main.tsx. Do not treat it as
-  caused by your changes.
 - Notes are listed 5 per page with search; after create/edit/delete the frontend refetches the
   current page rather than patching local state.
 

@@ -6,6 +6,7 @@ import dotenv from 'dotenv';
 import { setRoutes } from './routes/notes';
 import dbRouter from './routes/db';
 import hardcoverRouter from './routes/hardcover';
+import sourceTagsRouter from './routes/sourceTags';
 
 // Load environment variables as early as possible so routes can read process.env
 dotenv.config();
@@ -28,6 +29,7 @@ app.use('/api', (req, _res, next) => {
 });
 
 setRoutes(app);
+app.use('/api', sourceTagsRouter);
 // mount DB debug routes under /api/db
 app.use('/api/db', dbRouter);
 // mount proxy route for Hardcover under /api

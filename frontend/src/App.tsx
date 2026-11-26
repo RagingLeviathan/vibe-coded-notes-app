@@ -6,11 +6,13 @@ import GraphqlExample from './pages/GraphqlExample';
 import SearchBooks from './pages/SearchBooks';
 import SearchNotes from './pages/SearchNotes';
 import NoteDetail from './pages/NoteDetail';
+import SourceTags from './pages/SourceTags';
 const MyBooksLazy = lazy(() => import('./pages/MyBooks'));
 
 const NAV_LINKS = [
   { to: '/', label: 'Home' },
   { to: '/search', label: 'Search Notes' },
+  { to: '/source-tags', label: 'Source Tags' },
   { to: '/my-books', label: 'My Books' },
   { to: '/search-books', label: 'Search Books' },
   { to: '/hardcover', label: 'Hardcover' },
@@ -120,10 +122,7 @@ const App: React.FC = () => {
           <div className="site-header-inner mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4 px-4 sm:px-6">
             <Link className="brand flex items-center gap-3" to="/" aria-label="Notes App home">
               <span className="brand-mark" aria-hidden="true">
-                <svg viewBox="0 0 48 48" fill="none">
-                  <path d="M24 3v42M3 24h42M9 9l30 30M39 9 9 39M24 11l9 4 4 9-4 9-9 4-9-4-4-9 4-9 9-4ZM24 17l5 2 2 5-2 5-5 2-5-2-2-5 2-5 5-2Z" />
-                  <circle cx="24" cy="24" r="2.5" />
-                </svg>
+                <img className="spider-fizz" src={new URL('../spider-fizz-head-icon.png', import.meta.url).href} alt="" />
               </span>
               <span><span className="brand-name">Notes App</span><span className="brand-subtitle">YOUR PERSONAL WEB</span></span>
             </Link>
@@ -153,6 +152,7 @@ const App: React.FC = () => {
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/search" element={<SearchNotes />} />
+            <Route path="/source-tags" element={<SourceTags />} />
             <Route path="/notes/:id" element={<NoteDetail />} />
             <Route path="/hardcover" element={<Hardcover />} />
             <Route path="/graphql-example" element={<GraphqlExample />} />

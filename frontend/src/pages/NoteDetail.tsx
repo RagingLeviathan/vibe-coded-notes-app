@@ -1,15 +1,16 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import SourceTag from '../components/SourceTag';
 import BookTag from '../components/BookTag';
-import { fetchNote } from '../services/api';
+import NoteEditor from '../components/NoteEditor';
+import { fetchNote, getErrorMessage, updateNote } from '../services/api';
 
 interface Note {
     id: number;
     title: string;
     content: string;
-    sourceShort?: string;
-    sourceFull?: string;
+    sourceShort?: string | null;
+    sourceFull?: string | null;
     bookId?: number | null;
     bookTitle?: string | null;
     bookSlug?: string | null;
@@ -18,14 +19,19 @@ interface Note {
 
 const NoteDetail: React.FC = () => {
     const { id } = useParams<{ id: string }>();
+    const currentId = useRef(id);
+    currentId.current = id;
     const [note, setNote] = useState<Note | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [editing, setEditing] = useState(false);
 
     useEffect(() => {
         let cancelled = false;
         setLoading(true);
         setError(null);
+        setEditing(false);
+        setNote(null);
         fetchNote(id as string)
             .then((data) => {
                 if (!cancelled) setNote(data);
@@ -55,17 +61,43 @@ const NoteDetail: React.FC = () => {
                 </div>
             )}
 
-            {note && (
+            {note && String(note.id) === id && (
                 <article className="mt-4 bg-white dark:bg-gray-800 shadow-lg rounded-lg p-6 border-l-4 border-blue-200 dark:border-blue-300">
                     <h1 className="text-4xl font-extrabold text-blue-800 dark:text-blue-300">{note.title}</h1>
                     {note.sourceShort && <div className="mt-1 text-sm text-blue-400 dark:text-blue-200">{note.sourceShort}</div>}
                     {note.createdAt && <div className="mt-1 text-sm text-gray-500 dark:text-gray-300">{new Date(note.createdAt).toLocaleString()}</div>}
                     <p className="mt-4 text-lg text-gray-700 dark:text-gray-200 whitespace-pre-wrap">{note.content}</p>
-                        <div className="mt-5 flex flex-wrap gap-2">
-                            {note.sourceFull && <SourceTag value={note.sourceFull} />}
-                            {note.bookId && note.bookTitle && <BookTag title={note.bookTitle} slug={note.bookSlug} />}
-                        </div>
+                    <div className="mt-5 flex flex-wrap gap-2">
+                        {note.sourceFull && <SourceTag value={note.sourceFull} />}
+                        {note.bookId && note.bookTitle && <BookTag title={note.bookTitle} slug={note.bookSlug} />}
+                    </div>
+                    {!editing && (
+                        <button type="button" onClick={() => setEditing(true)} className="mt-5 px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600">
+                            Edit note
+                        </button>
+                    )}
                 </article>
+            )}
+            {note && String(note.id) === id && editing && (
+                <div className="mt-4">
+                    <NoteEditor
+                        key={note.id}
+                        initialNote={note}
+                        onCancel={() => setEditing(false)}
+                        onSave={async ({ id: _id, ...fields }) => {
+                            try {
+                                const updated: Note = await updateNote(note.id, fields);
+                                if (currentId.current === id) {
+                                    setNote(updated);
+                                    setEditing(false);
+                                }
+                                return null;
+                            } catch (err) {
+                                return getErrorMessage(err);
+                            }
+                        }}
+                    />
+                </div>
             )}
         </div>
     );

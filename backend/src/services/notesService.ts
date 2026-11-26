@@ -34,6 +34,8 @@ const WRITABLE_COLUMNS: Record<string, string> = {
 
 const NOTE_SELECT = 'id, title, content, source_short AS sourceShort, source_full AS sourceFull, book_id AS bookId, book_title AS bookTitle, book_slug AS bookSlug, created_at AS createdAt';
 
+type Query = (sql: string, params?: any[]) => Promise<any>;
+
 export class NotesService {
     async getAllNotes(page = 1, limit = 5, q?: string, fields?: string[]): Promise<{ rows: Note[]; total: number }> {
         const offset = (page - 1) * limit;
@@ -72,40 +74,62 @@ export class NotesService {
     }
 
     async createNote(noteData: Omit<Note, 'id' | 'createdAt'>): Promise<Note> {
-        // Using parameterized queries to avoid SQL injection
-        const result: any = await db.query(
-            'INSERT INTO notes_logs (title, content, source_short, source_full, book_id, book_title, book_slug) VALUES (?, ?, ?, ?, ?, ?, ?)',
-            [
-                noteData.title,
-                noteData.content,
-                noteData.sourceShort || null,
-                noteData.sourceFull || null,
-                noteData.bookId || null,
-                noteData.bookTitle || null,
-                noteData.bookSlug || null,
-            ]
-        );
-        const insertId = result.insertId as number;
-        const note = await this.getNoteById(insertId);
-        if (!note) throw new Error('Created note could not be retrieved');
-        return note;
+        const save = async (query: Query, data: Omit<Note, 'id' | 'createdAt'>): Promise<Note> => {
+            const result = await query(
+                'INSERT INTO notes_logs (title, content, source_short, source_full, book_id, book_title, book_slug) VALUES (?, ?, ?, ?, ?, ?, ?)',
+                [
+                    data.title,
+                    data.content,
+                    data.sourceShort || null,
+                    data.sourceFull || null,
+                    data.bookId || null,
+                    data.bookTitle || null,
+                    data.bookSlug || null,
+                ]
+            );
+            const rows = await query(`SELECT ${NOTE_SELECT} FROM notes_logs WHERE id = ?`, [result.insertId]);
+            const note: Note | undefined = rows[0];
+            if (!note) throw new Error('Created note could not be retrieved');
+            return note;
+        };
+        if (!noteData.sourceShort) return save(db.query, noteData);
+        return db.transaction(async connection => {
+            const query: Query = async (sql, params) => (await connection.query(sql, params))[0];
+            return save(query, await this.applySourceTag(query, noteData));
+        });
     }
 
     async updateNote(id: number, noteData: Partial<Note>): Promise<Note | null> {
-        const fields: string[] = [];
-        const params: any[] = [];
-        for (const [key, column] of Object.entries(WRITABLE_COLUMNS)) {
-            const value = (noteData as any)[key];
-            if (value !== undefined) {
-                fields.push(`${column} = ?`);
-                params.push(value);
+        const save = async (query: Query, data: Partial<Note>): Promise<Note | null> => {
+            const fields: string[] = [];
+            const params: any[] = [];
+            for (const [key, column] of Object.entries(WRITABLE_COLUMNS)) {
+                const value = (data as any)[key];
+                if (value !== undefined) {
+                    fields.push(`${column} = ?`);
+                    params.push(value);
+                }
             }
-        }
-        if (fields.length === 0) return this.getNoteById(id);
+            if (fields.length) {
+                params.push(id);
+                await query(`UPDATE notes_logs SET ${fields.join(', ')} WHERE id = ?`, params);
+            }
+            const rows = await query(`SELECT ${NOTE_SELECT} FROM notes_logs WHERE id = ?`, [id]);
+            return rows[0] || null;
+        };
+        if (!noteData.sourceShort) return save(db.query, noteData);
+        return db.transaction(async connection => {
+            const query: Query = async (sql, params) => (await connection.query(sql, params))[0];
+            return save(query, await this.applySourceTag(query, noteData));
+        });
+    }
 
-        params.push(id);
-        await db.query(`UPDATE notes_logs SET ${fields.join(', ')} WHERE id = ?`, params);
-        return this.getNoteById(id);
+    private async applySourceTag<T extends Partial<Note>>(query: Query, note: T): Promise<T> {
+        const rows = await query(
+            'SELECT source_short AS sourceShort, source_full AS sourceFull, book_id AS bookId, book_title AS bookTitle, book_slug AS bookSlug FROM source_tags WHERE BINARY source_short = BINARY ? FOR UPDATE',
+            [note.sourceShort]
+        );
+        return rows[0] ? { ...note, ...rows[0] } : note;
     }
 
     async deleteNote(id: number): Promise<boolean> {
