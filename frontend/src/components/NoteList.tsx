@@ -6,6 +6,8 @@ interface Note {
   title: string;
   content: string;
   createdAt?: string;
+  sourceShort?: string;
+  sourceFull?: string;
 }
 
 interface NoteListProps {
@@ -18,10 +20,10 @@ const NoteList: React.FC<NoteListProps> = ({ notes, onDelete, onEdit }) => {
   return (
     <div className="note-list">
       {notes.length === 0 ? (
-        <p>No notes available.</p>
+        <div className="empty-state"><span aria-hidden="true">✧</span><p>No notes available.</p><small>There is room here for your next idea.</small></div>
       ) : (
         notes.map(note => (
-          <NoteItem key={note.id} note={note as any} onDelete={onDelete} onEdit={onEdit} />
+          <NoteItem key={note.id} note={note} onDelete={onDelete} onEdit={onEdit} />
         ))
       )}
     </div>

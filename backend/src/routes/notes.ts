@@ -5,6 +5,7 @@ const router = Router();
 const notesController = new NotesController();
 
 router.get('/notes', notesController.getAllNotes.bind(notesController));
+router.get('/notes/:id', notesController.getNoteById.bind(notesController));
 router.post('/notes', notesController.createNote.bind(notesController));
 router.put('/notes/:id', notesController.updateNote.bind(notesController));
 router.delete('/notes/:id', notesController.deleteNote.bind(notesController));

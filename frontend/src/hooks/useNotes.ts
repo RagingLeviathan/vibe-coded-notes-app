@@ -1,38 +1,72 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { fetchNotes, createNote, updateNote, deleteNote } from '../services/api';
 
 export const useNotes = () => {
     const [notes, setNotes] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<any | null>(null);
+    const [refreshError, setRefreshError] = useState<any | null>(null);
     const [page, setPage] = useState<number>(1);
     const [limit] = useState<number>(5);
     const [total, setTotal] = useState<number>(0);
     const [search, setSearch] = useState<string>('');
+    const requestId = useRef(0);
+    const pendingRequests = useRef(0);
 
-    const loadNotes = useCallback(async (p = 1, q?: string) => {
-        setLoading(true);
+    const loadNotes = useCallback(async (p = 1, q?: string, silent = false) => {
+        if (silent && pendingRequests.current > 0) return;
+        const currentRequest = ++requestId.current;
+        pendingRequests.current++;
+        if (!silent) setLoading(true);
         try {
-            const res: any = await fetchNotes(p, limit, q);
+            let res: any = await fetchNotes(p, limit, q);
+            if (currentRequest !== requestId.current) return;
+            const lastPage = Math.max(1, Math.ceil(res.total / limit));
+            if (p > lastPage) {
+                res = await fetchNotes(lastPage, limit, q);
+                if (currentRequest !== requestId.current) return;
+            }
             // res: { data, total, page, limit, q }
             setNotes(res.data || res);
             setTotal(res.total || 0);
             setPage(res.page || p);
             if (q !== undefined) setSearch(q);
+            if (silent) setRefreshError(null);
+            else {
+                setError(null);
+                setRefreshError(null);
+            }
         } catch (err) {
-            setError(err);
+            if (currentRequest === requestId.current) {
+                if (silent) setRefreshError(err);
+                else setError(err);
+            }
         } finally {
-            setLoading(false);
+            pendingRequests.current--;
+            if (currentRequest === requestId.current) setLoading(false);
         }
     }, [limit]);
 
     useEffect(() => {
         loadNotes(1, search || undefined);
+        return () => { requestId.current++; };
     }, []);
+
+    useEffect(() => {
+        const refresh = () => {
+            if (document.visibilityState === 'visible') loadNotes(page, search, true);
+        };
+        const timer = window.setInterval(refresh, 10000);
+        document.addEventListener('visibilitychange', refresh);
+        return () => {
+            window.clearInterval(timer);
+            document.removeEventListener('visibilitychange', refresh);
+        };
+    }, [loadNotes, page, search]);
 
     const addNote = async (note: any) => {
         try {
-            const newNote = await createNote(note);
+            await createNote(note);
             // refresh current page (preserving current search)
             loadNotes(page, search || undefined);
         } catch (err) {
@@ -42,10 +76,8 @@ export const useNotes = () => {
 
     const editNote = async (id: number, updatedNote: any) => {
         try {
-            const note = await updateNote(id, updatedNote);
-            setNotes((prevNotes: any[]) => 
-                prevNotes.map((n: any) => (n.id === id ? note : n))
-            );
+            await updateNote(id, updatedNote);
+            loadNotes(page, search || undefined);
         } catch (err) {
             setError(err);
         }
@@ -80,7 +112,7 @@ export const useNotes = () => {
         loadNotes(1, q || undefined);
     };
 
-    return { notes, loading, error, addNote, editNote, removeNote, fetchNotes: loadNotes, page, total, totalPages, goToPage, nextPage, prevPage, search, searchNotes };
+    return { notes, loading, error: error || refreshError, addNote, editNote, removeNote, fetchNotes: loadNotes, page, total, totalPages, goToPage, nextPage, prevPage, search, searchNotes };
 };
 
 export default useNotes;

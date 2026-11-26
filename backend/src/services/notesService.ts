@@ -32,7 +32,7 @@ export class NotesService {
     }
 
     async getNoteById(id: number): Promise<Note | null> {
-        const rows: any = await db.query('SELECT id, title, content, created_at AS createdAt FROM notes_logs WHERE id = ?', [id]);
+        const rows: any = await db.query('SELECT id, title, content, source_short AS sourceShort, source_full AS sourceFull, created_at AS createdAt FROM notes_logs WHERE id = ?', [id]);
         const note = (rows as any[])[0];
         return note || null;
     }
@@ -41,8 +41,9 @@ export class NotesService {
         // Using parameterized queries to avoid SQL injection
         const result: any = await db.query('INSERT INTO notes_logs (title, content, source_short, source_full) VALUES (?, ?, ?, ?)', [noteData.title, noteData.content, (noteData as any).sourceShort || null, (noteData as any).sourceFull || null]);
         const insertId = result.insertId as number;
-        const rows: any = await db.query('SELECT id, title, content, created_at AS createdAt FROM notes_logs WHERE id = ?', [insertId]);
-        return rows[0] as Note;
+        const note = await this.getNoteById(insertId);
+        if (!note) throw new Error('Created note could not be retrieved');
+        return note;
     }
 
     async updateNote(id: number, noteData: Partial<Note>): Promise<Note | null> {
@@ -79,7 +80,7 @@ export class NotesService {
 
     async deleteNote(id: number): Promise<boolean> {
         const result: any = await db.query('DELETE FROM notes_logs WHERE id = ?', [id]);
-        // For MySQL, affectedRows indicates deletion count
-        return (result.affectedRows || result.affectedRows === 0) ? result.affectedRows > 0 : true;
+        if (typeof result.affectedRows !== 'number') throw new Error('Invalid delete result from database');
+        return result.affectedRows > 0;
     }
 }
