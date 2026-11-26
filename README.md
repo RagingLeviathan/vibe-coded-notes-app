@@ -140,7 +140,7 @@ WampServer is a local development environment, not a public hosting setup; see t
 
 ### Contributing
 
-Feel free to submit issues or pull requests for improvements or bug fixes. 
+Feel free to submit issues or pull requests for improvements or bug fixes.
 
 ### License
 
@@ -186,13 +186,13 @@ This project is licensed under the MIT License.
 
 ### API Overview
 
-| Method | Endpoint | Purpose |
-| --- | --- | --- |
-| `GET` | `/api/notes?page=1&limit=5&q=search` | Retrieve a page of notes, optionally filtered by search text |
-| `GET` | `/api/notes/:id` | Retrieve one note by ID, including source fields |
-| `POST` | `/api/notes` | Create a note |
-| `PUT` | `/api/notes/:id` | Update a note by ID |
-| `DELETE` | `/api/notes/:id` | Delete a note by ID |
+| Method   | Endpoint                             | Purpose                                                      |
+| -------- | ------------------------------------ | ------------------------------------------------------------ |
+| `GET`    | `/api/notes?page=1&limit=5&q=search` | Retrieve a page of notes, optionally filtered by search text |
+| `GET`    | `/api/notes/:id`                     | Retrieve one note by ID, including source fields             |
+| `POST`   | `/api/notes`                         | Create a note                                                |
+| `PUT`    | `/api/notes/:id`                     | Update a note by ID                                          |
+| `DELETE` | `/api/notes/:id`                     | Delete a note by ID                                          |
 
 The list endpoint returns `{ data, total, page, limit, q }`. Successful creates and updates return the saved note including its source fields, and deletes return HTTP `204 No Content`. GET, PUT, and DELETE by ID return `404` when the note does not exist and `400` for an invalid ID.
 
