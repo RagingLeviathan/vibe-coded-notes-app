@@ -49,7 +49,7 @@ const BookPicker: React.FC<BookPickerProps> = ({ value, onChange }) => {
     };
 
     return (
-        <div className="col-span-1 sm:col-span-12">
+        <div>
             <div className="flex flex-wrap items-center gap-2">
                 <span className="text-sm text-gray-600 dark:text-gray-300">Book (optional):</span>
                 {value ? <BookTag title={value.bookTitle} slug={value.bookSlug} /> : <span className="text-sm text-gray-500 dark:text-gray-400">none</span>}
