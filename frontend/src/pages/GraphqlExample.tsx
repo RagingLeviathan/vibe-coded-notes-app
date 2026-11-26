@@ -1,42 +1,19 @@
 import React, { useState } from 'react';
 
-// Cast import.meta to any to avoid TS ImportMeta typing issues in this small example
-const _meta: any = import.meta;
-const HARDCOVER_URL = (_meta.env && _meta.env.VITE_HARDCOVER_URL) || 'https://api.hardcover.app/v1/graphql';
-
-// Normalize env token like other pages (strip surrounding quotes or leading "Bearer ")
-let _envToken: string = (_meta.env && _meta.env.VITE_HARDCOVER_TOKEN) || '';
-if (typeof _envToken === 'string') {
-  if ((_envToken.startsWith('"') && _envToken.endsWith('"')) || (_envToken.startsWith("'") && _envToken.endsWith("'"))) {
-    _envToken = _envToken.slice(1, -1);
-  }
-  if (_envToken.toLowerCase().startsWith('bearer ')) _envToken = _envToken.slice(7);
-}
-const ENV_TOKEN = _envToken || '';
-
-function fetchGraphQL(operationsDoc: string, operationName: string, variables: Record<string, any>, token?: string) {
-  const headers: any = { 'Content-Type': 'application/json' };
-  if (token && token.trim() !== '') headers.Authorization = `Bearer ${token.trim()}`;
-
-  return fetch(HARDCOVER_URL, {
-    method: 'POST',
-    headers,
-    body: JSON.stringify({ query: operationsDoc, variables, operationName }),
-  }).then((r) => r.json());
-}
-
 const operation = `
   query MyQuery {
-    user_books {
+    user_books(limit: 5) {
       id
-      title
       created_at
+      book {
+        id
+        title
+      }
     }
   }
 `;
 
 const GraphqlExample: React.FC = () => {
-  const [token, setToken] = useState<string>(ENV_TOKEN);
   const [result, setResult] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -53,7 +30,9 @@ const GraphqlExample: React.FC = () => {
         body: JSON.stringify({ query: operation, variables: {}, operationName: 'MyQuery' }),
       });
       const json = await res.json();
-      if (json.errors) {
+      if (!res.ok) {
+        setError(json.error || json.message || `Request failed (HTTP ${res.status})`);
+      } else if (json.errors) {
         setError(JSON.stringify(json.errors));
       }
       setResult(json);
@@ -68,12 +47,7 @@ const GraphqlExample: React.FC = () => {
     <div className="mx-auto p-4 max-w-4xl">
       <h1 className="text-3xl font-bold mb-4 text-blue-700 dark:text-blue-300">GraphQL Example</h1>
 
-      <p className="text-sm text-gray-600 dark:text-gray-300 mb-3">Endpoint: <code className="bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded">{HARDCOVER_URL}</code></p>
-
-      <div className="mb-3">
-        <label className="block text-sm text-gray-700 dark:text-gray-200 mb-1">Token (env or paste here)</label>
-        <input value={token} onChange={(e) => setToken(e.target.value)} placeholder="VITE_HARDCOVER_TOKEN" className="w-full p-2 rounded border dark:border-gray-600 bg-white dark:bg-gray-800 text-sm" />
-      </div>
+      <p className="text-sm text-gray-600 dark:text-gray-300 mb-3">The sample query uses the backend proxy at <code className="bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded">/api/hardcover</code> and its configured Hardcover token.</p>
 
       <div className="mb-6">
         <button onClick={run} disabled={loading} className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 disabled:opacity-60">{loading ? 'Running...' : 'Run sample query'}</button>

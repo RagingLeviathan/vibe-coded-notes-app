@@ -131,7 +131,9 @@ The following steps are for Windows and a **new, empty** local database. If you 
 
 WampServer is a local development environment, not a public hosting setup; see the [WampServer site](https://wampserver.aviatechno.net/).
 
-For backend-proxied Hardcover features, configure `HARDCOVER_URL` and `HARDCOVER_TOKEN` in `backend\.env` and restart the backend. The legacy Hardcover and GraphQL example pages can also use `VITE_HARDCOVER_TOKEN` in `frontend\.env.local` or a token entered in the page, but Vite embeds `VITE_` variables in frontend code visible to visitors. Do not put a private token there on a LAN-accessible deployment.
+For backend-proxied Hardcover features, configure `HARDCOVER_TOKEN` in `backend\.env` and restart the backend. The GraphQL Example uses the proxy and its server-side token. The legacy Hardcover page can also use `VITE_HARDCOVER_TOKEN` in `frontend\.env.local` or a token entered in the page, but Vite embeds `VITE_` variables in frontend code visible to visitors. Do not put a private token there on a LAN-accessible deployment.
+
+Search Books and My Books show covers, ratings, genres, and series when available from Hardcover. Cover images load directly from their external image URLs in each browser; a placeholder appears if a cover is missing or fails to load.
 
 Both projects provide `npm.cmd run typecheck`, `npm.cmd run lint`, and `npm.cmd run check`. The frontend has a pre-existing type error in `src/main.tsx` (`react-dom/client` with React 17).
 

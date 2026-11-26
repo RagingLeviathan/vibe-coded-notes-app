@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { searchBooks, BookHit, addNoteLink, bookUrl } from '../services/hardcover';
+import BookCard from '../components/BookCard';
+import { searchBooks, BookHit } from '../services/hardcover';
 
 /**
  * SearchBooks page
@@ -79,18 +79,7 @@ const SearchBooks: React.FC = () => {
         ) : (
           <ul className="space-y-3">
             {results.map((b) => (
-              <li key={b.id} className="p-3 border rounded bg-gray-50 dark:bg-gray-900 dark:border-gray-700">
-                <div className="font-semibold text-gray-900 dark:text-gray-100">{b.title || <em>No title</em>}</div>
-                {b.subtitle && <div className="text-sm text-gray-600 dark:text-gray-300">{b.subtitle}</div>}
-                {b.authors.length > 0 && <div className="text-sm text-gray-600 dark:text-gray-300">by {b.authors.join(', ')}</div>}
-                <div className="text-sm text-gray-600 dark:text-gray-300">Pages: {b.pages ?? '—'} · Year: {b.releaseYear ?? '—'}</div>
-                <div className="mt-2 flex gap-2">
-                  <Link to={addNoteLink(b)} className="text-sm px-3 py-1 rounded bg-blue-600 text-white hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600">Add note</Link>
-                  {bookUrl(b.slug) && (
-                    <a href={bookUrl(b.slug) as string} target="_blank" rel="noopener noreferrer" className="text-sm px-3 py-1 rounded bg-gray-200 text-gray-800 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-100 dark:hover:bg-gray-600">View on Hardcover</a>
-                  )}
-                </div>
-              </li>
+              <BookCard key={b.id} book={b} />
             ))}
           </ul>
         )}

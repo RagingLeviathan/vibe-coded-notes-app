@@ -16,8 +16,17 @@ export interface BookHit {
     authors: string[];
     pages?: number;
     releaseYear?: number;
+    releaseDate?: string;
     slug?: string;
+    coverUrl?: string;
+    rating?: number;
+    ratingsCount?: number;
+    genres: string[];
+    series: string[];
 }
+
+export const safeCoverUrl = (url: unknown): string | undefined =>
+    typeof url === 'string' && url.startsWith('https://') ? url : undefined;
 
 export const searchBooks = async (q: string, page = 1, perPage = 25): Promise<{ hits: BookHit[]; total: number }> => {
     const res = await fetch('/api/hardcover', {
@@ -44,6 +53,11 @@ export const searchBooks = async (q: string, page = 1, perPage = 25): Promise<{ 
                 pages: d.pages,
                 releaseYear: d.release_year,
                 slug: d.slug,
+                coverUrl: safeCoverUrl(d.image?.url),
+                rating: typeof d.rating === 'number' && Number.isFinite(d.rating) && d.rating > 0 ? d.rating : undefined,
+                ratingsCount: typeof d.ratings_count === 'number' && Number.isFinite(d.ratings_count) && d.ratings_count >= 0 ? d.ratings_count : undefined,
+                genres: Array.isArray(d.genres) ? d.genres.filter((genre: unknown): genre is string => typeof genre === 'string' && genre.length > 0) : [],
+                series: Array.isArray(d.series_names) ? d.series_names.filter((name: unknown): name is string => typeof name === 'string' && name.length > 0) : [],
             };
         }),
         total: (typesense && typesense.found) || 0,
