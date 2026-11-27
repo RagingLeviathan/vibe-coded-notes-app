@@ -19,12 +19,8 @@ app.use(bodyParser.json());
 
 // Simple request logger for /api routes to aid debugging incoming proxy requests
 app.use('/api', (req, _res, next) => {
-    try {
-        const now = new Date().toISOString();
-        console.log(`${now} [API] ${req.method} ${req.originalUrl}`);
-    } catch (e) {
-        // ignore logging errors
-    }
+    const now = new Date().toISOString();
+    console.log(`${now} [API] ${req.method} ${req.path}`);
     next();
 });
 

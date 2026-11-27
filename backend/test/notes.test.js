@@ -113,3 +113,38 @@ test('source filtering is exact, parameterized, and paginated', async t => {
   assert.equal((await fetch(`${base}/by-source`, request({ sourceFull: 'x'.repeat(10001) }))).status, 400);
   assert.equal(calls.length, 2);
 });
+
+test('database failures log useful diagnostics without note contents or SQL', async t => {
+  const originalQuery = db.query;
+  const originalError = console.error;
+  const logs = [];
+  console.error = (...args) => logs.push(args);
+  db.query = async () => {
+    const error = new Error('private note text and password');
+    error.code = 'ECONNREFUSED';
+    error.errno = -4078;
+    error.syscall = 'connect';
+    error.sql = 'private note text';
+    throw error;
+  };
+  const app = express();
+  app.use(express.json());
+  setRoutes(app);
+  const server = app.listen(0, '127.0.0.1');
+  await new Promise(resolve => server.once('listening', resolve));
+  t.after(() => { db.query = originalQuery; console.error = originalError; server.close(); });
+  const response = await fetch(`http://127.0.0.1:${server.address().port}/api/notes`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ title: 'private note text', content: 'private note text' })
+  });
+  assert.equal(response.status, 500);
+  const body = await response.json();
+  assert.match(body.errorId, /^[0-9a-f-]{36}$/);
+  assert.equal(body.error, undefined);
+  assert.equal(logs.length, 1);
+  assert.equal(logs[0][2].operation, 'create note');
+  assert.equal(logs[0][2].errorId, body.errorId);
+  assert.equal(logs[0][2].code, 'ECONNREFUSED');
+  assert.equal(logs[0][2].syscall, 'connect');
+  assert.doesNotMatch(JSON.stringify({ body, logs }), /private note text|password/);
+});

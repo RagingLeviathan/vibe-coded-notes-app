@@ -1,8 +1,24 @@
 import { Request, Response } from 'express';
 import { NotesService, Note } from '../services/notesService';
 import { LIMITS, validateNoteInput } from '../validation/noteInput';
+import { randomUUID } from 'crypto';
 
 const MAX_PAGE_SIZE = 100;
+
+function logNoteError(operation: string, error: unknown): string {
+    const errorId = randomUUID();
+    const details: Record<string, string | number> = {};
+    if (typeof error === 'object' && error !== null) {
+        const fields = error as Record<string, unknown>;
+        for (const key of ['name', 'code', 'sqlState', 'syscall']) {
+            const value = fields[key];
+            if (typeof value === 'string' && /^[A-Za-z0-9_]{1,40}$/.test(value)) details[key] = value;
+        }
+        if (typeof fields.errno === 'number' && Number.isFinite(fields.errno)) details.errno = fields.errno;
+    }
+    console.error(new Date().toISOString(), '[notes error]', { errorId, operation, ...details });
+    return errorId;
+}
 
 const CSV_COLUMNS: Array<keyof Note> = ['id', 'title', 'content', 'sourceShort', 'sourceFull', 'bookId', 'bookTitle', 'bookSlug', 'createdAt'];
 
@@ -51,7 +67,7 @@ class NotesController {
             }
             res.status(200).json(note);
         } catch (error) {
-            res.status(500).json({ message: 'Error retrieving note', error });
+            res.status(500).json({ message: 'Error retrieving note', errorId: logNoteError('get note', error) });
         }
     }
 
@@ -69,10 +85,10 @@ class NotesController {
                 return;
             }
             const result = await this.notesService.getAllNotes(page, limit, q, fields, typeof sourceFull === 'string' ? sourceFull : undefined);
-            console.log(`${req.method} ${req.path} ->`, result.rows.length, 'rows (total', result.total, ')', q ? `q=${q}` : '');
+            console.log(`${req.method} ${req.path} ->`, result.rows.length, 'rows (total', result.total, ')');
             res.status(200).json({ data: result.rows, total: result.total, page, limit, q, fields });
         } catch (error) {
-            res.status(500).json({ message: 'Error retrieving notes', error });
+            res.status(500).json({ message: 'Error retrieving notes', errorId: logNoteError('list notes', error) });
         }
     }
 
@@ -92,13 +108,12 @@ class NotesController {
                 res.type('application/json; charset=utf-8').send(JSON.stringify({ exportedAt: new Date().toISOString(), count: notes.length, notes }, null, 2));
             }
         } catch (error) {
-            res.status(500).json({ message: 'Error exporting notes' });
+            res.status(500).json({ message: 'Error exporting notes', errorId: logNoteError('export notes', error) });
         }
     }
 
     public async createNote(req: Request, res: Response): Promise<void> {
         try {
-            console.log('POST /api/notes body ->', req.body);
             const { errors, value } = validateNoteInput(req.body, 'create');
             if (Object.keys(errors).length > 0) {
                 res.status(400).json({ message: 'Invalid note', errors });
@@ -107,7 +122,7 @@ class NotesController {
             const newNote = await this.notesService.createNote(value as Note);
             res.status(201).json(newNote);
         } catch (error) {
-            res.status(500).json({ message: 'Error creating note', error });
+            res.status(500).json({ message: 'Error creating note', errorId: logNoteError('create note', error) });
         }
     }
 
@@ -115,7 +130,6 @@ class NotesController {
         const id = getNoteId(req, res);
         if (id === undefined) return;
         try {
-            console.log(`PUT /api/notes/${id} body ->`, req.body);
             const { errors, value } = validateNoteInput(req.body, 'update');
             if (Object.keys(errors).length > 0) {
                 res.status(400).json({ message: 'Invalid note', errors });
@@ -128,7 +142,7 @@ class NotesController {
             }
             res.status(200).json(updatedNote);
         } catch (error) {
-            res.status(500).json({ message: 'Error updating note', error });
+            res.status(500).json({ message: 'Error updating note', errorId: logNoteError('update note', error) });
         }
     }
 
@@ -143,7 +157,7 @@ class NotesController {
             }
             res.status(204).send();
         } catch (error) {
-            res.status(500).json({ message: 'Error deleting note', error });
+            res.status(500).json({ message: 'Error deleting note', errorId: logNoteError('delete note', error) });
         }
     }
 }
