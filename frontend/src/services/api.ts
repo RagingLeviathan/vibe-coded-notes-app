@@ -38,6 +38,8 @@ export interface SourceTag {
     bookId: number;
     bookTitle: string;
     bookSlug: string | null;
+    takenFromCopybook: boolean;
+    takenFromBook: boolean;
 }
 
 export type SourceTagInput = Omit<SourceTag, 'id'>;

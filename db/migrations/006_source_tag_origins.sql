@@ -1,0 +1,3 @@
+ALTER TABLE source_tags
+    ADD COLUMN taken_from_copybook BOOLEAN NOT NULL DEFAULT FALSE,
+    ADD COLUMN taken_from_book BOOLEAN NOT NULL DEFAULT FALSE;

@@ -12,11 +12,11 @@ test('source tag API validates and synchronizes matching notes', async t => {
   const tag = { sourceShort: 'NEW', sourceFull: 'Full citation', bookId: 7, bookTitle: 'Book', bookSlug: 'book' };
   const calls = [];
   let duplicate = false;
-  db.query = async () => [{ id: 1, ...tag }];
+  db.query = async () => [{ id: 1, ...tag, takenFromCopybook: 1, takenFromBook: 0 }];
   db.transaction = async work => work({
     query: async (sql, params) => {
       calls.push({ sql, params });
-      if (sql.startsWith('SELECT')) return [params[0] === 1 ? [{ sourceShort: 'OLD' }] : []];
+      if (sql.startsWith('SELECT')) return [params[0] === 1 ? [{ sourceShort: 'OLD', takenFromCopybook: 1, takenFromBook: 0 }] : []];
       if (duplicate) throw Object.assign(new Error('duplicate'), { code: 'ER_DUP_ENTRY' });
       if (sql.startsWith('INSERT')) return [{ insertId: 1 }];
       return [{ affectedRows: 2 }];
@@ -31,16 +31,32 @@ test('source tag API validates and synchronizes matching notes', async t => {
   const url = `http://127.0.0.1:${server.address().port}/api/source-tags`;
   const request = (method, path, body) => fetch(url + path, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
 
-  assert.equal((await (await fetch(url)).json())[0].sourceShort, 'NEW');
+  const listed = (await (await fetch(url)).json())[0];
+  assert.equal(listed.sourceShort, 'NEW');
+  assert.equal(listed.takenFromCopybook, true);
+  assert.equal(listed.takenFromBook, false);
   let response = await request('POST', '', { sourceShort: 'NEW' });
   assert.equal(response.status, 400);
   response = await request('POST', '', tag);
   assert.equal(response.status, 201);
-  assert.equal((await response.json()).updatedNotes, 2);
+  const created = await response.json();
+  assert.equal(created.updatedNotes, 2);
+  assert.equal(created.takenFromCopybook, false);
+  assert.equal(created.takenFromBook, false);
+  assert.deepEqual(calls.find(c => c.sql.startsWith('INSERT')).params.slice(-2), [false, false]);
   assert.deepEqual(calls.at(-1).params.slice(-2), ['NEW', 'NEW']);
   response = await request('PUT', '/1', tag);
   assert.equal(response.status, 200);
+  assert.equal((await response.json()).takenFromCopybook, true);
+  assert.deepEqual(calls.find(c => c.sql.startsWith('UPDATE source_tags')).params.slice(-3), [true, false, 1]);
   assert.deepEqual(calls.at(-1).params.slice(-2), ['OLD', 'NEW']);
+  response = await request('PUT', '/1', { ...tag, takenFromCopybook: false, takenFromBook: true });
+  assert.equal(response.status, 200);
+  assert.deepEqual(calls.filter(c => c.sql.startsWith('UPDATE source_tags')).at(-1).params.slice(-3), [false, true, 1]);
+  const callCount = calls.length;
+  response = await request('POST', '', { ...tag, takenFromBook: 'true' });
+  assert.equal(response.status, 400);
+  assert.equal(calls.length, callCount);
   response = await request('PUT', '/2', tag);
   assert.equal(response.status, 404);
   response = await request('PUT', '/invalid', tag);
@@ -48,6 +64,26 @@ test('source tag API validates and synchronizes matching notes', async t => {
   duplicate = true;
   response = await request('POST', '', tag);
   assert.equal(response.status, 409);
+});
+
+test('note reads derive tag origins with exact short-code matching', async t => {
+  const originalQuery = db.query;
+  const queries = [];
+  db.query = async (sql) => {
+    queries.push(sql);
+    if (sql.startsWith('SELECT COUNT')) return [{ total: 1 }];
+    return [{ id: 1, title: 'Title', content: 'Body', takenFromCopybook: 1, takenFromBook: 0 }];
+  };
+  t.after(() => { db.query = originalQuery; });
+  const service = new NotesService();
+  const list = await service.getAllNotes();
+  const detail = await service.getNoteById(1);
+  assert.equal(list.rows[0].takenFromCopybook, true);
+  assert.equal(list.rows[0].takenFromBook, false);
+  assert.equal(detail.takenFromCopybook, true);
+  for (const sql of queries.filter(sql => !sql.startsWith('SELECT COUNT'))) {
+    assert.match(sql, /LEFT JOIN source_tags t ON BINARY n.source_short = BINARY t.source_short/);
+  }
 });
 
 test('notes using a managed short code use its full source and book', async t => {

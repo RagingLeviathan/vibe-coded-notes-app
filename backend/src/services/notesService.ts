@@ -10,15 +10,17 @@ export interface Note {
     bookId?: number | null;
     bookTitle?: string | null;
     bookSlug?: string | null;
+    takenFromCopybook?: boolean;
+    takenFromBook?: boolean;
     createdAt?: string;
 }
 
 const SEARCHABLE_COLUMNS: Record<string, string> = {
-    title: 'title',
-    content: 'content',
-    sourceShort: 'source_short',
-    sourceFull: 'source_full',
-    bookTitle: 'book_title',
+    title: 'n.title',
+    content: 'n.content',
+    sourceShort: 'n.source_short',
+    sourceFull: 'n.source_full',
+    bookTitle: 'n.book_title',
 };
 
 // API field name -> column name for writes. Column names never come from user input.
@@ -32,7 +34,14 @@ const WRITABLE_COLUMNS: Record<string, string> = {
     bookSlug: 'book_slug',
 };
 
-const NOTE_SELECT = 'id, title, content, source_short AS sourceShort, source_full AS sourceFull, book_id AS bookId, book_title AS bookTitle, book_slug AS bookSlug, created_at AS createdAt';
+const NOTE_SELECT = 'n.id, n.title, n.content, n.source_short AS sourceShort, n.source_full AS sourceFull, n.book_id AS bookId, n.book_title AS bookTitle, n.book_slug AS bookSlug, n.created_at AS createdAt, COALESCE(t.taken_from_copybook, 0) AS takenFromCopybook, COALESCE(t.taken_from_book, 0) AS takenFromBook';
+const NOTE_FROM = 'FROM notes_logs n LEFT JOIN source_tags t ON BINARY n.source_short = BINARY t.source_short';
+
+const normalizeNote = (note: Note): Note => ({
+    ...note,
+    takenFromCopybook: Boolean(note.takenFromCopybook),
+    takenFromBook: Boolean(note.takenFromBook),
+});
 
 type Query = (sql: string, params?: any[]) => Promise<any>;
 
@@ -43,7 +52,7 @@ export class NotesService {
         const params: string[] = [];
 
         if (sourceFull !== undefined) {
-            conditions.push('BINARY source_full = BINARY ?');
+            conditions.push('BINARY n.source_full = BINARY ?');
             params.push(sourceFull);
         }
 
@@ -58,21 +67,21 @@ export class NotesService {
         }
 
         const where = conditions.length ? ` WHERE ${conditions.join(' AND ')}` : '';
-        const countRows: any = await db.query(`SELECT COUNT(*) AS total FROM notes_logs${where}`, params);
+        const countRows: any = await db.query(`SELECT COUNT(*) AS total FROM notes_logs n${where}`, params);
         const total = (countRows && countRows[0] && countRows[0].total) ? Number(countRows[0].total) : 0;
-        const rows: any = await db.query(`SELECT ${NOTE_SELECT} FROM notes_logs${where} ORDER BY created_at DESC, id DESC LIMIT ? OFFSET ?`, [...params, limit, offset]);
-        return { rows: rows as Note[], total };
+        const rows = await db.query(`SELECT ${NOTE_SELECT} ${NOTE_FROM}${where} ORDER BY n.created_at DESC, n.id DESC LIMIT ? OFFSET ?`, [...params, limit, offset]) as Note[];
+        return { rows: rows.map(normalizeNote), total };
     }
 
     async getAllNotesForExport(): Promise<Note[]> {
-        const rows: any = await db.query(`SELECT ${NOTE_SELECT} FROM notes_logs ORDER BY created_at ASC, id ASC`);
-        return rows as Note[];
+        const rows = await db.query(`SELECT ${NOTE_SELECT} ${NOTE_FROM} ORDER BY n.created_at ASC, n.id ASC`) as Note[];
+        return rows.map(normalizeNote);
     }
 
     async getNoteById(id: number): Promise<Note | null> {
-        const rows: any = await db.query(`SELECT ${NOTE_SELECT} FROM notes_logs WHERE id = ?`, [id]);
+        const rows: any = await db.query(`SELECT ${NOTE_SELECT} ${NOTE_FROM} WHERE n.id = ?`, [id]);
         const note = (rows as any[])[0];
-        return note || null;
+        return note ? normalizeNote(note) : null;
     }
 
     async createNote(noteData: Omit<Note, 'id' | 'createdAt'>): Promise<Note> {
@@ -89,10 +98,10 @@ export class NotesService {
                     data.bookSlug || null,
                 ]
             );
-            const rows = await query(`SELECT ${NOTE_SELECT} FROM notes_logs WHERE id = ?`, [result.insertId]);
+            const rows = await query(`SELECT ${NOTE_SELECT} ${NOTE_FROM} WHERE n.id = ?`, [result.insertId]);
             const note: Note | undefined = rows[0];
             if (!note) throw new Error('Created note could not be retrieved');
-            return note;
+            return normalizeNote(note);
         };
         if (!noteData.sourceShort) return save(db.query, noteData);
         return db.transaction(async connection => {
@@ -116,8 +125,8 @@ export class NotesService {
                 params.push(id);
                 await query(`UPDATE notes_logs SET ${fields.join(', ')} WHERE id = ?`, params);
             }
-            const rows = await query(`SELECT ${NOTE_SELECT} FROM notes_logs WHERE id = ?`, [id]);
-            return rows[0] || null;
+            const rows = await query(`SELECT ${NOTE_SELECT} ${NOTE_FROM} WHERE n.id = ?`, [id]);
+            return rows[0] ? normalizeNote(rows[0]) : null;
         };
         if (!noteData.sourceShort) return save(db.query, noteData);
         return db.transaction(async connection => {

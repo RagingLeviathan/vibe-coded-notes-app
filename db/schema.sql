@@ -19,5 +19,7 @@ CREATE TABLE IF NOT EXISTS source_tags (
     book_id INT UNSIGNED NOT NULL,
     book_title VARCHAR(255) NOT NULL,
     book_slug VARCHAR(255) NULL DEFAULT NULL,
+    taken_from_copybook BOOLEAN NOT NULL DEFAULT FALSE,
+    taken_from_book BOOLEAN NOT NULL DEFAULT FALSE,
     UNIQUE KEY uq_source_tags_short (source_short)
 ) ENGINE=InnoDB DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;

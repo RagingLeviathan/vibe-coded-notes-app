@@ -8,7 +8,7 @@ const { setRoutes } = require('../src/routes/notes');
 test('note ID routes return the note, validate IDs, and report missing records', async t => {
   const originalQuery = db.query;
   const originalTransaction = db.transaction;
-  const note = { id: 1, title: 'Title', content: 'Body', sourceShort: 'Short', sourceFull: 'Full', bookId: 7, bookTitle: 'Book', bookSlug: 'book' };
+  const note = { id: 1, title: 'Title', content: 'Body', sourceShort: 'Short', sourceFull: 'Full', bookId: 7, bookTitle: 'Book', bookSlug: 'book', takenFromCopybook: false, takenFromBook: false };
   let present = true;
   db.query = async (sql, params) => {
     if (sql.includes('FROM source_tags')) return [];
@@ -101,12 +101,12 @@ test('source filtering is exact, parameterized, and paginated', async t => {
   assert.equal(body.data[0].sourceFull, 'A & B_%');
   assert.equal(calls.length, 2);
   for (const call of calls) {
-    assert.match(call.sql, /WHERE BINARY source_full = BINARY \? AND \(title LIKE \? OR content LIKE \?\)/);
+    assert.match(call.sql, /WHERE BINARY n.source_full = BINARY \? AND \(n.title LIKE \? OR n.content LIKE \?\)/);
     assert.ok(!call.sql.includes('A & B_%'));
   }
   assert.deepEqual(calls[0].params, ['A & B_%', '%six%', '%six%']);
   assert.deepEqual(calls[1].params, ['A & B_%', '%six%', '%six%', 5, 5]);
-  assert.match(calls[1].sql, /ORDER BY created_at DESC, id DESC LIMIT \? OFFSET \?/);
+  assert.match(calls[1].sql, /ORDER BY n.created_at DESC, n.id DESC LIMIT \? OFFSET \?/);
 
   assert.equal((await fetch(`${base}/by-source`, request({ sourceFull: '' }))).status, 400);
   assert.equal((await fetch(`${base}/by-source`, request({ sourceFull: ['one', 'two'] }))).status, 400);

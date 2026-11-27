@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom';
 import SourceTag from '../components/SourceTag';
 import BookTag from '../components/BookTag';
 import NoteEditor from '../components/NoteEditor';
+import SourceOrigins from '../components/SourceOrigins';
 import { fetchNote, getErrorMessage, updateNote } from '../services/api';
 
 interface Note {
@@ -14,6 +15,8 @@ interface Note {
     bookId?: number | null;
     bookTitle?: string | null;
     bookSlug?: string | null;
+    takenFromCopybook?: boolean;
+    takenFromBook?: boolean;
     createdAt?: string;
 }
 
@@ -71,6 +74,7 @@ const NoteDetail: React.FC = () => {
                         {note.sourceFull && <SourceTag value={note.sourceFull} />}
                         {note.bookId && note.bookTitle && <BookTag title={note.bookTitle} slug={note.bookSlug} />}
                     </div>
+                    <SourceOrigins takenFromCopybook={note.takenFromCopybook} takenFromBook={note.takenFromBook} />
                     {!editing && (
                         <button type="button" onClick={() => setEditing(true)} className="mt-5 px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600">
                             Edit note

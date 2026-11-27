@@ -49,7 +49,8 @@ notes-app
 │       ├── 002_add_source_fields.sql # Legacy migration
 │       ├── 003_create_notes_logs_table.sql
 │       ├── 004_add_book_link.sql
-│       └── 005_create_source_tags.sql
+│       ├── 005_create_source_tags.sql
+│       └── 006_source_tag_origins.sql
 ├── .gitignore         # Files to ignore in version control
 └── README.md          # Project documentation
 ```
@@ -70,7 +71,7 @@ The following steps are for Windows and a **new, empty** local database. If you 
 
 2. **Create the database.** On the same computer, open [phpMyAdmin](http://localhost/phpmyadmin/) or choose phpMyAdmin from WampServer's tray menu. Log in using the database credentials for the chosen server. If phpMyAdmin offers a server choice, select the MySQL or MariaDB instance you intend to use. In its **SQL** tab run `SELECT @@port;` and note the result for step 4. Click **New** in the left sidebar, enter `notes` as the database name, choose `utf8mb4_unicode_ci` if available, and click **Create**. If `notes` already exists, do not recreate or delete it: inspect it and back it up before proceeding.
 
-3. **Create or upgrade the tables.** In phpMyAdmin, select the `notes` database and open its **SQL** tab. For a new database, run [db/schema.sql](db/schema.sql), which creates `notes_logs` and `source_tags`. Migration 003 creates the base `notes_logs` table, migration 004 adds the book fields, and migration 005 creates `source_tags`. Migrations 001 and 002 are legacy; do not run them for a fresh setup.
+3. **Create or upgrade the tables.** In phpMyAdmin, select the `notes` database and open its **SQL** tab. For a new database, run [db/schema.sql](db/schema.sql), which creates `notes_logs` and `source_tags` with all current columns. For an existing database, migrations 003–006 create and upgrade those tables. Migrations 001 and 002 are legacy; do not run them for a fresh setup.
 
    If `notes_logs` already exists, back it up and inspect its columns and indexes first. An existing table created using the earlier setup instructions needs `book_id`, `book_title`, and `book_slug`. For MariaDB, run [migration 004](db/migrations/004_add_book_link.sql). On MySQL, its `IF NOT EXISTS` syntax may not be supported: if all three book columns and the index are absent, run the following instead. If any already exist, add only the missing ones.
 
@@ -84,7 +85,7 @@ The following steps are for Windows and a **new, empty** local database. If you 
 
    The earlier table also lacked `updated_at`; if it is absent, add it with `ALTER TABLE notes_logs ADD COLUMN updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP;`.
 
-   For an existing installation, back up the database, then run [migration 005](db/migrations/005_create_source_tags.sql) in the selected `notes` database. It creates the separate `source_tags` table without changing existing notes. The backend needs this table when saving notes with a short source.
+   For an existing installation, back up the database, then apply any missing migrations: [migration 005](db/migrations/005_create_source_tags.sql) creates the separate `source_tags` table, and [migration 006](db/migrations/006_source_tag_origins.sql) adds the optional origin flags. Apply 006 only if its columns are not already present; existing tags start with both options unchecked. Neither migration changes note contents.
 
 4. **Configure the backend.** In VS Code, create a file named `.env` in the `backend` folder (not in the project root). This example uses a local `root` account without a password on port `3306`:
 
@@ -168,7 +169,7 @@ Recommended options:
 
 Before going live:
 
-- Run migrations 003, 004, and 005 on the production database.
+- Run migrations 003, 004, 005, and 006 on the production database.
 - Build the backend with `npx tsc` and start it with `node dist/...` (or keep `ts-node` for small deployments); don't use `nodemon` in production.
 - Keep `backend/.env` and tokens out of git; set them as host environment variables.
 - The app has no login, so anyone who can reach it can read, edit and delete notes. Put it behind authentication (e.g. HTTP basic auth at nginx, Cloudflare Access) or keep it private.
@@ -246,6 +247,8 @@ Open **Source Tags** to create a short code, full source, and linked Hardcover b
 Adding a source or a book directly to an individual note does not create a shared tag. To manage those notes together, create a tag with their existing short source in **Source Tags**.
 
 Choose a saved tag in the note editor, or supply its short code when creating or updating a note through the API or Discord. When a matching short source is supplied, the saved full source and book take precedence over values in the same request. Notes with other codes retain their own source and book. If an update omits the short source, only the supplied fields are changed. Unsaved drafts in other browsers can overwrite newer changes, as with other note edits.
+
+Each shared tag can optionally be marked **Taken from copybook**, **Taken from book directly**, both, or neither. Notes inherit these labels at read time from the saved tag with the exact, case-sensitive short source, including existing notes and notes created via Discord. Changing the tag changes the labels on matching notes; unmatched notes have neither label. The note API and JSON/CSV exports include `takenFromCopybook` and `takenFromBook`. Source tag updates that omit these fields preserve their existing values.
 
 ## Configuration
 
@@ -334,7 +337,7 @@ The application uses a `notes_logs` table with the following core fields:
 - `created_at` — note creation timestamp.
 - `updated_at` — last update timestamp.
 
-Use [db/schema.sql](db/schema.sql) for a new database, or migrations 003, 004, and 005. The first two migrations are legacy.
+Use [db/schema.sql](db/schema.sql) for a new database, or migrations 003 through 006. The first two migrations are legacy.
 
 ## Technology Stack
 

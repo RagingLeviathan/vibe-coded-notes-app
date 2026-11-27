@@ -131,6 +131,13 @@ button:disabled { cursor: not-allowed; opacity: .48; }
 .editor-fields label { display: grid; gap: 7px; color: var(--text); font-size: 12px; font-weight: 700; }
 .editor-fields input, .editor-fields textarea, .editor-fields select { width: 100%; border: 1px solid var(--border); border-radius: 9px; padding: 11px 12px; background: var(--field); color: var(--text); font-size: 13px; font-weight: 400; }
 .editor-fields textarea { min-height: 150px; resize: vertical; }
+.origin-options { display: grid; gap: 10px; }
+.origin-options legend { color: var(--text); font-size: 12px; font-weight: 700; }
+.origin-options p { color: var(--muted); font-size: 12px; }
+.editor-fields .origin-options label { display: flex; align-items: center; gap: 8px; font-weight: 400; }
+.editor-fields .origin-options input[type="checkbox"] { width: auto; margin: 0; padding: 0; accent-color: var(--accent-solid); }
+.source-origins { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.source-origins span { padding: 4px 9px; border-radius: 6px; background: var(--accent-soft); color: var(--accent); font-size: 11px; font-weight: 700; }
 input::placeholder, textarea::placeholder { color: var(--subtle); opacity: 1; }
 .source-heading { display: flex; justify-content: space-between; padding-top: 3px; color: var(--muted); font-size: 9px; font-weight: 800; letter-spacing: .12em; }
 .source-heading span:last-child { color: var(--subtle); font-weight: 600; }

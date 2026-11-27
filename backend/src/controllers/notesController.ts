@@ -20,7 +20,7 @@ function logNoteError(operation: string, error: unknown): string {
     return errorId;
 }
 
-const CSV_COLUMNS: Array<keyof Note> = ['id', 'title', 'content', 'sourceShort', 'sourceFull', 'bookId', 'bookTitle', 'bookSlug', 'createdAt'];
+const CSV_COLUMNS: Array<keyof Note> = ['id', 'title', 'content', 'sourceShort', 'sourceFull', 'bookId', 'bookTitle', 'bookSlug', 'takenFromCopybook', 'takenFromBook', 'createdAt'];
 
 // Quotes every cell and neutralizes spreadsheet formulas (cells starting with = + - @ or a control character)
 const csvCell = (value: unknown): string => {

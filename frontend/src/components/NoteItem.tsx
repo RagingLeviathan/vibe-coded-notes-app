@@ -2,6 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import SourceTag from './SourceTag';
 import BookTag from './BookTag';
+import SourceOrigins from './SourceOrigins';
 
 export interface NoteData {
     id: number;
@@ -13,6 +14,8 @@ export interface NoteData {
     bookId?: number | null;
     bookTitle?: string | null;
     bookSlug?: string | null;
+    takenFromCopybook?: boolean;
+    takenFromBook?: boolean;
 }
 
 interface NoteItemProps {
@@ -36,6 +39,7 @@ const NoteItem: React.FC<NoteItemProps> = ({ note, onDelete, onEdit }) => (
                 {note.bookId && note.bookTitle && <BookTag title={note.bookTitle} slug={note.bookSlug} />}
             </div>
         )}
+        <SourceOrigins takenFromCopybook={note.takenFromCopybook} takenFromBook={note.takenFromBook} />
         <div className="note-actions flex items-center gap-2">
             <Link to={`/notes/${note.id}`}>View</Link>
             {onEdit && <button type="button" onClick={() => onEdit(note)}>Edit</button>}

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import BookPicker, { LinkedBook } from '../components/BookPicker';
 import { fetchSourceTags, getErrorMessage, saveSourceTag, SourceTag } from '../services/api';
+import SourceOrigins from '../components/SourceOrigins';
 
 const SourceTags: React.FC = () => {
   const [tags, setTags] = useState<SourceTag[]>([]);
@@ -8,6 +9,8 @@ const SourceTags: React.FC = () => {
   const [short, setShort] = useState('');
   const [full, setFull] = useState('');
   const [book, setBook] = useState<LinkedBook | null>(null);
+  const [takenFromCopybook, setTakenFromCopybook] = useState(false);
+  const [takenFromBook, setTakenFromBook] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -31,6 +34,8 @@ const SourceTags: React.FC = () => {
     setShort('');
     setFull('');
     setBook(null);
+    setTakenFromCopybook(false);
+    setTakenFromBook(false);
   };
 
   const submit = async (event: React.FormEvent) => {
@@ -54,6 +59,8 @@ const SourceTags: React.FC = () => {
         bookId: book.bookId,
         bookTitle: book.bookTitle,
         bookSlug: book.bookSlug || null,
+        takenFromCopybook,
+        takenFromBook,
       }, editing?.id);
       reset();
       await load();
@@ -70,6 +77,8 @@ const SourceTags: React.FC = () => {
     setShort(tag.sourceShort);
     setFull(tag.sourceFull);
     setBook({ bookId: tag.bookId, bookTitle: tag.bookTitle, bookSlug: tag.bookSlug });
+    setTakenFromCopybook(tag.takenFromCopybook);
+    setTakenFromBook(tag.takenFromBook);
     setError(null);
     setMessage(null);
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -86,6 +95,12 @@ const SourceTags: React.FC = () => {
           <label>Short source<input value={short} onChange={event => setShort(event.target.value)} maxLength={255} required /></label>
           <label>Full source<textarea value={full} onChange={event => setFull(event.target.value)} maxLength={10000} required rows={3} /></label>
           <BookPicker value={book} onChange={setBook} required />
+          <fieldset className="origin-options">
+            <legend>Where were the notes taken from? (optional)</legend>
+            <p>These choices appear on all notes using this exact short source.</p>
+            <label><input type="checkbox" checked={takenFromCopybook} onChange={event => setTakenFromCopybook(event.target.checked)} /> Taken from copybook</label>
+            <label><input type="checkbox" checked={takenFromBook} onChange={event => setTakenFromBook(event.target.checked)} /> Taken from book directly</label>
+          </fieldset>
           {error && <p className="feedback feedback-error" role="alert">{error}</p>}
           {message && <p className="feedback" role="status">{message}</p>}
           <button type="submit" className="primary-button" disabled={saving}>{saving ? 'Saving…' : editing ? 'Update tag' : 'Create tag'}</button>
@@ -100,6 +115,7 @@ const SourceTags: React.FC = () => {
               <h3>{tag.sourceShort}</h3>
               <p className="note-content">{tag.sourceFull}</p>
               <p className="note-source-short">{tag.bookTitle}</p>
+              <SourceOrigins takenFromCopybook={tag.takenFromCopybook} takenFromBook={tag.takenFromBook} />
               <div className="note-actions"><button type="button" onClick={() => edit(tag)}>Edit</button></div>
             </li>
           ))}
