@@ -123,6 +123,12 @@ The following steps are for Windows and a **new, empty** local database. If you 
 
 8. **Try the Discord bot.** With the WampServer database and the notes backend still running, start the bot in its own terminal if it is not already running. Use `/note create`, then `/note find` or `/note view`; the dashboard should update within about 10 seconds while visible. The bot defaults to `http://127.0.0.1:5000/api/notes`, so it and the backend must run on the same machine for that address. If its commands have not been registered yet, run `npm.cmd run register-commands` in the bot folder; this replaces that bot application's guild commands with `/word` and `/note`.
 
+### Windows launcher
+
+After the initial setup and dependency installation in all three projects, start the WampServer database service and double-click [start-notes-and-wordhippo.bat](start-notes-and-wordhippo.bat). It opens separate command windows for the notes backend and frontend (`npm run dev`) and WordHippo (`npm start`); inspect each window for startup errors. The launcher does not start the database, install packages, or register Discord commands. It expects WordHippo at `%USERPROFILE%\wordhippo-discord-bot`; set `WORDHIPPO_DIR` before running it if the project is elsewhere.
+
+Open `http://localhost:3000` for notes or `http://localhost:3102` for WordHippo. The notes dashboard remains available on the LAN as configured; the WordHippo dashboard remains localhost-only. To stop the apps, press Ctrl+C in each window and confirm if prompted. Avoid starting another copy if the apps are already running.
+
 ### Troubleshooting database setup
 
 - **Bot says `Notes API returned HTTP 500`:** the bot reached the API, but the API failed while processing the request. A stopped database, wrong credentials, missing database, or missing table are possible causes; the message alone does not prove which. Check the two URLs in step 6 and the backend terminal. The local health response can include the database error; do not post passwords or connection strings.
@@ -195,6 +201,7 @@ This project is licensed under the MIT License.
 - Search input is debounced by 300 ms to reduce repeated API requests.
 - Search results reset to the first page.
 - Browse notes in pages of five records with previous, numbered, and next-page controls.
+- Select a note's source badge to browse notes with the exact same full source, five per page. Matching is case-sensitive and does not require a saved shared tag.
 
 ### User Interface
 
@@ -222,13 +229,14 @@ This project is licensed under the MIT License.
 | `GET`    | `/api/notes/export?format=json\|csv` | Export all notes                                             |
 | `GET`    | `/api/notes/:id`                     | Retrieve one note by ID, including source fields             |
 | `POST`   | `/api/notes`                         | Create a note                                                |
+| `POST`   | `/api/notes/by-source?page=1&limit=5` | List notes matching an exact, case-sensitive full source    |
 | `PUT`    | `/api/notes/:id`                     | Update a note by ID                                          |
 | `DELETE` | `/api/notes/:id`                     | Delete a note by ID                                          |
 | `GET`    | `/api/source-tags`                   | List saved source tags                                       |
 | `POST`   | `/api/source-tags`                   | Create a source tag and synchronize matching notes           |
 | `PUT`    | `/api/source-tags/:id`               | Update a tag and synchronize matching notes                  |
 
-The list endpoint returns `{ data, total, page, limit, q }`. Successful creates and updates return the saved note including its source fields, and deletes return HTTP `204 No Content`. GET, PUT, and DELETE by ID return `404` when the note does not exist and `400` for an invalid ID.
+The list endpoints return `{ data, total, page, limit, q }`. The by-source endpoint accepts `{ "sourceFull": "..." }` as JSON and supports the same pagination and optional search parameters as the list endpoint. Successful creates and updates return the saved note including its source fields, and deletes return HTTP `204 No Content`. GET, PUT, and DELETE by ID return `404` when the note does not exist and `400` for an invalid ID.
 
 ### Shared source tags
 

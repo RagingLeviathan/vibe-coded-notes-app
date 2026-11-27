@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { NotesService, Note } from '../services/notesService';
-import { validateNoteInput } from '../validation/noteInput';
+import { LIMITS, validateNoteInput } from '../validation/noteInput';
 
 const MAX_PAGE_SIZE = 100;
 
@@ -63,8 +63,13 @@ class NotesController {
             const limit = Number.isNaN(rawLimit) ? 5 : Math.min(MAX_PAGE_SIZE, Math.max(1, rawLimit));
             const q = req.query.q ? String(req.query.q) : undefined;
             const fields = req.query.fields ? String(req.query.fields).split(',').map((f) => f.trim()) : undefined;
-            const result = await this.notesService.getAllNotes(page, limit, q, fields);
-            console.log('GET /api/notes ->', result.rows.length, 'rows (total', result.total, ')', q ? `q=${q}` : '');
+            const sourceFull: unknown = req.method === 'POST' ? req.body?.sourceFull : undefined;
+            if (req.method === 'POST' && (typeof sourceFull !== 'string' || sourceFull.trim() === '' || sourceFull.length > LIMITS.sourceFull)) {
+                res.status(400).json({ message: 'sourceFull must be non-empty text of at most 10000 characters' });
+                return;
+            }
+            const result = await this.notesService.getAllNotes(page, limit, q, fields, typeof sourceFull === 'string' ? sourceFull : undefined);
+            console.log(`${req.method} ${req.path} ->`, result.rows.length, 'rows (total', result.total, ')', q ? `q=${q}` : '');
             res.status(200).json({ data: result.rows, total: result.total, page, limit, q, fields });
         } catch (error) {
             res.status(500).json({ message: 'Error retrieving notes', error });

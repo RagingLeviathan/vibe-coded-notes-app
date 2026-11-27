@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { fetchNotes, createNote, updateNote, deleteNote, getErrorMessage } from '../services/api';
 
-export const useNotes = () => {
+export const useNotes = (sourceFull?: string) => {
     const [notes, setNotes] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -19,11 +19,11 @@ export const useNotes = () => {
         pendingRequests.current++;
         if (!silent) setLoading(true);
         try {
-            let res: any = await fetchNotes(p, limit, q);
+            let res: any = await fetchNotes(p, limit, q, undefined, sourceFull);
             if (currentRequest !== requestId.current) return;
             const lastPage = Math.max(1, Math.ceil(res.total / limit));
             if (p > lastPage) {
-                res = await fetchNotes(lastPage, limit, q);
+                res = await fetchNotes(lastPage, limit, q, undefined, sourceFull);
                 if (currentRequest !== requestId.current) return;
             }
             // res: { data, total, page, limit, q }
@@ -45,7 +45,7 @@ export const useNotes = () => {
             pendingRequests.current--;
             if (currentRequest === requestId.current) setLoading(false);
         }
-    }, [limit]);
+    }, [limit, sourceFull]);
 
     useEffect(() => {
         loadNotes(1, search || undefined);

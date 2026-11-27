@@ -111,10 +111,10 @@ const Home: React.FC = () => {
                     </nav>
                 </section>
             </div>
-            <footer className="dashboard-footer">
+            <div className="dashboard-footer">
                 <span>MADE FOR YOUR MIND</span>
                 <span className="footer-mascot"><span>Take it one thread at a time.</span><img className="spider-fizz" src={new URL('../../spider-fizz-crawl-side.png', import.meta.url).href} alt="" loading="lazy" /></span>
-            </footer>
+            </div>
         </div>
     );
 };

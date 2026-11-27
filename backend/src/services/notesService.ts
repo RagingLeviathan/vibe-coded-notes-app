@@ -37,10 +37,15 @@ const NOTE_SELECT = 'id, title, content, source_short AS sourceShort, source_ful
 type Query = (sql: string, params?: any[]) => Promise<any>;
 
 export class NotesService {
-    async getAllNotes(page = 1, limit = 5, q?: string, fields?: string[]): Promise<{ rows: Note[]; total: number }> {
+    async getAllNotes(page = 1, limit = 5, q?: string, fields?: string[], sourceFull?: string): Promise<{ rows: Note[]; total: number }> {
         const offset = (page - 1) * limit;
-        let total = 0;
-        let rows: any = [];
+        const conditions: string[] = [];
+        const params: string[] = [];
+
+        if (sourceFull !== undefined) {
+            conditions.push('BINARY source_full = BINARY ?');
+            params.push(sourceFull);
+        }
 
         if (q && q.trim().length > 0) {
             // Partial match (LIKE %term%) on the chosen fields; defaults to all searchable fields.
@@ -48,17 +53,14 @@ export class NotesService {
             const columns = (selected.length > 0 ? selected : Object.keys(SEARCHABLE_COLUMNS)).map((f) => SEARCHABLE_COLUMNS[f]);
             const escaped = q.trim().replace(/[\\%_]/g, '\\$&');
             const like = `%${escaped}%`;
-            const where = columns.map((c) => `${c} LIKE ?`).join(' OR ');
-            const likeParams = columns.map(() => like);
-            const countRows: any = await db.query(`SELECT COUNT(*) AS total FROM notes_logs WHERE ${where}`, likeParams);
-            total = (countRows && countRows[0] && countRows[0].total) ? Number(countRows[0].total) : 0;
-            rows = await db.query(`SELECT ${NOTE_SELECT} FROM notes_logs WHERE ${where} ORDER BY created_at DESC LIMIT ? OFFSET ?`, [...likeParams, limit, offset]);
-        } else {
-            const countRows: any = await db.query('SELECT COUNT(*) AS total FROM notes_logs');
-            total = (countRows && countRows[0] && countRows[0].total) ? Number(countRows[0].total) : 0;
-            rows = await db.query(`SELECT ${NOTE_SELECT} FROM notes_logs ORDER BY created_at DESC LIMIT ? OFFSET ?`, [limit, offset]);
+            conditions.push(`(${columns.map((c) => `${c} LIKE ?`).join(' OR ')})`);
+            params.push(...columns.map(() => like));
         }
 
+        const where = conditions.length ? ` WHERE ${conditions.join(' AND ')}` : '';
+        const countRows: any = await db.query(`SELECT COUNT(*) AS total FROM notes_logs${where}`, params);
+        const total = (countRows && countRows[0] && countRows[0].total) ? Number(countRows[0].total) : 0;
+        const rows: any = await db.query(`SELECT ${NOTE_SELECT} FROM notes_logs${where} ORDER BY created_at DESC, id DESC LIMIT ? OFFSET ?`, [...params, limit, offset]);
         return { rows: rows as Note[], total };
     }
 

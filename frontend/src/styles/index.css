@@ -51,7 +51,13 @@ button, input, textarea, select { font: inherit; }
 button, select { cursor: pointer; }
 button:disabled { cursor: not-allowed; opacity: .48; }
 :focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
-.app-shell { background: radial-gradient(ellipse at 75% 0%, var(--accent-soft), transparent 40%), var(--page); }
+.app-shell { display: flex; flex-direction: column; background: radial-gradient(ellipse at 75% 0%, var(--accent-soft), transparent 40%), var(--page); }
+.site-main { width: 100%; flex: 1; }
+.site-footer { display: flex; min-height: 180px; align-items: flex-end; justify-content: center; padding: 75px 16px 24px; border-top: 1px solid #39383e; background: #222226 url('../../charcoal-leviathan-footer.png') no-repeat center bottom / min(100%, 560px) auto; color: #f5f5f5; font-size: 15px; text-align: center; }
+.site-footer p { padding: 4px 8px; border-radius: 6px; background: rgba(34, 34, 38, .8); }
+.site-footer a { color: #bfdaff; text-decoration: underline; text-underline-offset: 3px; }
+.site-footer a:hover { color: #fff; }
+.site-footer a:focus-visible { outline-color: #fff; }
 .site-header { border-bottom: 1px solid var(--border); background: var(--surface); }
 .site-header-inner { min-height: 82px; padding-top: 12px; padding-bottom: 12px; }
 .site-nav { padding-bottom: 12px; color: var(--text); }

@@ -39,6 +39,7 @@ test('note ID routes return the note, validate IDs, and report missing records',
     db.transaction = originalTransaction;
     server.close();
   });
+
   const base = `http://127.0.0.1:${server.address().port}/api/notes`;
 
   let response = await fetch(`${base}/1`);
@@ -73,4 +74,42 @@ test('note ID routes return the note, validate IDs, and report missing records',
     method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ title: 'New' })
   });
   assert.equal(response.status, 404);
+});
+
+test('source filtering is exact, parameterized, and paginated', async t => {
+  const originalQuery = db.query;
+  const calls = [];
+  db.query = async (sql, params) => {
+    calls.push({ sql, params });
+    if (sql.startsWith('SELECT COUNT')) return [{ total: 6 }];
+    return [{ id: 6, title: 'Sixth', content: 'Body', sourceFull: 'A & B_%' }];
+  };
+  const app = express();
+  app.use(express.json());
+  setRoutes(app);
+  const server = app.listen(0, '127.0.0.1');
+  await new Promise(resolve => server.once('listening', resolve));
+  t.after(() => { db.query = originalQuery; server.close(); });
+  const base = `http://127.0.0.1:${server.address().port}/api/notes`;
+  const params = new URLSearchParams({ page: '2', limit: '5', q: 'six', fields: 'title,content' });
+  const request = body => ({ method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  const response = await fetch(`${base}/by-source?${params}`, request({ sourceFull: 'A & B_%' }));
+  assert.equal(response.status, 200);
+  const body = await response.json();
+  assert.equal(body.total, 6);
+  assert.equal(body.page, 2);
+  assert.equal(body.data[0].sourceFull, 'A & B_%');
+  assert.equal(calls.length, 2);
+  for (const call of calls) {
+    assert.match(call.sql, /WHERE BINARY source_full = BINARY \? AND \(title LIKE \? OR content LIKE \?\)/);
+    assert.ok(!call.sql.includes('A & B_%'));
+  }
+  assert.deepEqual(calls[0].params, ['A & B_%', '%six%', '%six%']);
+  assert.deepEqual(calls[1].params, ['A & B_%', '%six%', '%six%', 5, 5]);
+  assert.match(calls[1].sql, /ORDER BY created_at DESC, id DESC LIMIT \? OFFSET \?/);
+
+  assert.equal((await fetch(`${base}/by-source`, request({ sourceFull: '' }))).status, 400);
+  assert.equal((await fetch(`${base}/by-source`, request({ sourceFull: ['one', 'two'] }))).status, 400);
+  assert.equal((await fetch(`${base}/by-source`, request({ sourceFull: 'x'.repeat(10001) }))).status, 400);
+  assert.equal(calls.length, 2);
 });

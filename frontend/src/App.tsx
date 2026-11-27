@@ -7,6 +7,7 @@ import SearchBooks from './pages/SearchBooks';
 import SearchNotes from './pages/SearchNotes';
 import NoteDetail from './pages/NoteDetail';
 import SourceTags from './pages/SourceTags';
+import SourceNotes from './pages/SourceNotes';
 const MyBooksLazy = lazy(() => import('./pages/MyBooks'));
 
 const NAV_LINKS = [
@@ -148,11 +149,12 @@ const App: React.FC = () => {
           <Header />
           {storageError && <p className="storage-warning" role="status">Appearance settings could not be saved in this browser.</p>}
         </header>
-        <main className="mx-auto max-w-7xl px-4 pb-12 sm:px-6">
+        <main className="site-main mx-auto max-w-7xl px-4 pb-12 sm:px-6">
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/search" element={<SearchNotes />} />
             <Route path="/source-tags" element={<SourceTags />} />
+            <Route path="/source-notes" element={<SourceNotes />} />
             <Route path="/notes/:id" element={<NoteDetail />} />
             <Route path="/hardcover" element={<Hardcover />} />
             <Route path="/graphql-example" element={<GraphqlExample />} />
@@ -160,6 +162,9 @@ const App: React.FC = () => {
             <Route path="/search-books" element={<SearchBooks />} />
           </Routes>
         </main>
+        <footer className="site-footer">
+          <p>© {new Date().getFullYear()} Developed by <a href="https://github.com/RagingLeviathan">Raging Leviathan</a></p>
+        </footer>
       </div>
     </Router>
   );

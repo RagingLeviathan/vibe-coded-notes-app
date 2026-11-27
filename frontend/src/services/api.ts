@@ -5,11 +5,13 @@ import axios from 'axios';
 // listening on all interfaces (host: true) and forwarding /api to the backend.
 const API_BASE = '/api/notes';
 
-export const fetchNotes = async (page = 1, limit = 5, q?: string, fields?: string[]) => {
+export const fetchNotes = async (page = 1, limit = 5, q?: string, fields?: string[], sourceFull?: string) => {
     const params: any = { page, limit };
     if (q && q.length > 0) params.q = q;
     if (fields && fields.length > 0) params.fields = fields.join(',');
-    const response = await axios.get(API_BASE, { params });
+    const response = sourceFull === undefined
+        ? await axios.get(API_BASE, { params })
+        : await axios.post(`${API_BASE}/by-source`, { sourceFull }, { params });
     return response.data; // { data, total, page, limit, q }
 };
 
